@@ -1,0 +1,9 @@
+Options -Indexes
+DirectoryIndex index.php
+<FilesMatch "^(config(\.sample)?\.php|.*\.sqlite.*|.*\.md|\.git.*)$">
+  Require all denied
+</FilesMatch>
+# Force le HTTPS (décommente une fois le certificat actif)
+# RewriteEngine On
+# RewriteCond %{HTTPS} off
+# RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
