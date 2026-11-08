@@ -30,7 +30,7 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
     classes: ["casino-dnd-app"],
     tag: "div",
     window: { title: "Casino DnD", icon: "fa-solid fa-dice", resizable: true },
-    position: { width: 500, height: "auto" },
+    position: { width: 520, height: 760 },
     actions: {
       casinoTab: CasinoApp._onTab,
       createSession: CasinoApp._onCreateSession,
@@ -131,7 +131,6 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
     pjInput?.addEventListener("keydown", (ev) => {
       if (ev.key === "Enter") { ev.preventDefault(); CasinoApp._onAddPj.call(this); }
     });
-    if (this.tab === "pj") pjInput?.focus();
   }
 
   _onField(input) {

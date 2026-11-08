@@ -2,7 +2,7 @@
   "id": "casino-dnd",
   "title": "Casino DnD — Loot animé",
   "description": "Tirages de loot animés (roulette façon casino, cartes à retourner, effets et sons) affichés chez tous les joueurs, avec export vers Roll20.",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "authors": [
     {
       "name": "Leguevin-cocker"

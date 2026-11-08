@@ -526,3 +526,7 @@ body.cdnd-playing .cdnd-board { visibility: hidden; }
   box-shadow: 0 0 10px rgba(255, 190, 40, .35);
 }
 .cdnd-dir-btn:hover { filter: brightness(1.08); box-shadow: 0 0 16px rgba(255, 190, 40, .6); }
+/* panneau MJ : les trois sections ensemble */
+.casino-dnd-app .window-content { overflow-y: auto; }
+.cdnd-panel .cdnd-h { margin: 0; padding: 8px 14px 6px; font-size: 16px; border-bottom: 2px solid #d39b12; background: rgba(211, 155, 18, .12); }
+.cdnd-panel .cdnd-history { max-height: none; }

@@ -1,11 +1,6 @@
 <div class="cdnd-panel">
-  <nav class="cdnd-tabs">
-    <button type="button" data-action="casinoTab" data-tab="session" class="{{#if tabSession}}active{{/if}}">🎁 Session</button>
-    <button type="button" data-action="casinoTab" data-tab="pj" class="{{#if tabPj}}active{{/if}}">👥 PJ ({{pjCount}})</button>
-    <button type="button" data-action="casinoTab" data-tab="history" class="{{#if tabHistory}}active{{/if}}">📜 Historique ({{historyCount}})</button>
-  </nav>
 
-  {{#if tabSession}}
+  <h3 class="cdnd-h">🎁 Session</h3>
   <section>
     {{#if sessionActive}}
     <div class="cdnd-session-live">
@@ -65,9 +60,8 @@
     </div>
     {{/if}}
   </section>
-  {{/if}}
 
-  {{#if tabPj}}
+  <h3 class="cdnd-h">👥 PJ ({{pjCount}})</h3>
   <section>
     <p class="cdnd-poolinfo">Écris les noms <b>exactement comme sur Roll20</b> : ils apparaissent dans le menu sous chaque coffre ouvert, et le script Roll20 s'en sert pour remplir la bonne fiche.</p>
     <div class="cdnd-pj-list">
@@ -82,9 +76,8 @@
       <button type="button" class="cdnd-add" data-action="addPj"><i class="fa-solid fa-plus"></i> Ajouter</button>
     </div>
   </section>
-  {{/if}}
 
-  {{#if tabHistory}}
+  <h3 class="cdnd-h">📜 Historique ({{historyCount}})</h3>
   <section class="cdnd-history">
     {{#each history}}
     <div class="cdnd-h-entry" data-entry="{{id}}">
@@ -107,5 +100,4 @@
     {{/each}}
     {{#if hasHistory}}<button type="button" data-action="clearHistory"><i class="fa-solid fa-broom"></i> Vider l'historique</button>{{/if}}
   </section>
-  {{/if}}
 </div>
