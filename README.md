@@ -23,7 +23,14 @@ Foundry (tirage + animations)  ──📋 !loot CDND1.xxxx──▶  Roll20 (fic
 
 ---
 
-## 1. Installer le module Foundry
+## 1. Installer dans Foundry
+
+Il y a deux façons, avec le même code :
+
+- **Le système « Casino »** (recommandé pour un monde dédié au loot). Copie le dépôt dans `Data/systems/casino` (c'est `system.json` qui est utilisé), puis crée un monde avec le système *Casino*. Au premier lancement, le MJ obtient automatiquement une scène « Le Casino » sur le marbre. Il suffit aussi d'indiquer `systems/casino/assets/join-background.jpg` comme image de fond du monde.
+- **Le module « Casino DnD »**, pour l'ajouter à un monde existant (dnd5e ou autre). Voir ci-dessous.
+
+### Le module
 
 **Option A, par manifeste (le plus simple).** Après avoir créé une release (voir plus bas), dans Foundry : *Modules complémentaires → Installer un module*, puis colle ce lien :
 

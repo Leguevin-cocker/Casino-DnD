@@ -11,10 +11,9 @@
 import { drawLoot, buildStrip, roll20Command, parseWeights, rarityInfo, typeInfo } from "./engine.js";
 import { LootOverlay, copyText, showCopyBox, displayName } from "./overlay.js";
 import { SessionBoard } from "./board.js";
-import { MODULE_ID, loadPool, listSources } from "./sources.js";
+import { MODULE_ID, PKG_TYPE, PKG_PATH, SOCKET, loadPool, listSources } from "./sources.js";
 import { CasinoApp } from "./casino-app.js";
 
-const SOCKET = `module.${MODULE_ID}`;
 const HISTORY_MAX = 50;
 let overlay = null;
 let board = null;
@@ -137,10 +136,29 @@ Hooks.once("ready", () => {
     open: () => CasinoApp.open(), createSession, endSession, showBoard: () => { board.show(); game.socket.emit(SOCKET, { action: "show-board" }); },
     spin, replay, exportToRoll20, listSources, roll20Command, getCharacters, setCharacters, overlay, board
   };
-  game.modules.get(MODULE_ID).api = api;
+  if (PKG_TYPE === "system") game.system.api = api;
+  else game.modules.get(MODULE_ID).api = api;
   globalThis.CasinoDnD = api;
+  if (PKG_TYPE === "system" && isLeadGM()) ensureCasinoScene();
   console.log("Casino DnD | prêt 🎰");
 });
+
+/** Monde dédié (système Casino) : une scène « Le Casino » sur le marbre, si le monde n'en a aucune. */
+async function ensureCasinoScene() {
+  if (game.scenes.size) return;
+  try {
+    const scene = await Scene.create({
+      name: "Le Casino",
+      width: 1920, height: 1080, padding: 0,
+      background: { src: `${PKG_PATH}/assets/join-background.jpg` },
+      backgroundColor: "#0b1a12",
+      grid: { type: 0 },
+      tokenVision: false,
+      navigation: true
+    });
+    await scene.activate();
+  } catch (e) { console.warn("Casino | scène non créée", e); }
+}
 
 /* ------------------------------------------------------------------ */
 /* Session de coffres                                                   */

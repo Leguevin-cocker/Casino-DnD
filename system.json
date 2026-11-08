@@ -1,0 +1,18 @@
+{
+  "id": "casino",
+  "title": "Casino",
+  "description": "Le Casino interplanaire de Hugoblin : sessions de coffres de loot animés (bois, bronze, argent, or, gemme), partagées avec tous les joueurs, avec export vers Roll20.",
+  "version": "1.0.0",
+  "authors": [{ "name": "Leguevin-cocker" }],
+  "compatibility": { "minimum": "12", "verified": "13.351" },
+  "esmodules": ["scripts/main.js"],
+  "styles": ["styles/casino.css"],
+  "socket": true,
+  "documentTypes": {
+    "Actor": { "pj": {} },
+    "Item": { "objet": {} }
+  },
+  "grid": { "type": 0, "distance": 1, "units": "" },
+  "background": "systems/casino/assets/join-background.jpg",
+  "url": "https://github.com/Leguevin-cocker/Casino-DnD"
+}

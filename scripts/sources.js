@@ -6,12 +6,18 @@
  */
 import { validatePool, normRarity } from "./engine.js";
 
-export const MODULE_ID = "casino-dnd";
+// Le même code tourne comme module (modules/casino-dnd) ou comme système (systems/casino) :
+// on déduit le type de paquet et son id de l'URL de ce fichier.
+const PKG_MATCH = new URL(import.meta.url).pathname.match(/\/(modules|systems)\/([^/]+)\/scripts\//);
+export const PKG_TYPE = PKG_MATCH?.[1] === "systems" ? "system" : "module";
+export const MODULE_ID = PKG_MATCH?.[2] ?? "casino-dnd";
+export const PKG_PATH = `${PKG_MATCH?.[1] ?? "modules"}/${MODULE_ID}`;
+export const SOCKET = `${PKG_TYPE}.${MODULE_ID}`;
 let builtinCache = null;
 
 async function builtinPools() {
   if (!builtinCache) {
-    const res = await fetch(`modules/${MODULE_ID}/data/pools.json`);
+    const res = await fetch(`${PKG_PATH}/data/pools.json`);
     builtinCache = (await res.json()).map(validatePool);
   }
   return builtinCache;

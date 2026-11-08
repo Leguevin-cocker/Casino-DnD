@@ -4,7 +4,7 @@
  */
 import { RARITIES, rarityInfo, validatePool, normRarity, roll20CommandMulti } from "./engine.js";
 import { displayName, copyText, showCopyBox } from "./overlay.js";
-import { MODULE_ID, listSources, loadPool, saveCustomPool, deleteCustomPool } from "./sources.js";
+import { MODULE_ID, PKG_PATH, listSources, loadPool, saveCustomPool, deleteCustomPool } from "./sources.js";
 import { createSession, endSession, replay, getCharacters, setCharacters } from "./main.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -21,7 +21,7 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static open() {
     if (!game.user.isGM) return ui.notifications.warn("Le Casino est réservé au MJ.");
-    game.modules.get(MODULE_ID).api?.board?.minimize();
+    globalThis.CasinoDnD?.board?.minimize();
     (this.instance ??= new CasinoApp()).render({ force: true });
   }
 
@@ -48,7 +48,7 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   };
 
-  static PARTS = { main: { template: `modules/${MODULE_ID}/templates/casino.hbs` } };
+  static PARTS = { main: { template: `${PKG_PATH}/templates/casino.hbs` } };
 
   constructor(options = {}) {
     super(options);
@@ -170,7 +170,7 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (ok) await endSession();
   }
 
-  static _onShowBoard() { game.modules.get(MODULE_ID).api.showBoard(); }
+  static _onShowBoard() { globalThis.CasinoDnD?.showBoard(); }
 
   static async _onAddPj() {
     const input = this.element.querySelector("[data-pj-input]");
