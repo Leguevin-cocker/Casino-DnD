@@ -269,6 +269,8 @@ export function decodeExport(code) {
   return JSON.parse(b64urlDecode(raw.slice(EXPORT_PREFIX.length)));
 }
 export const roll20Command = (items, to = null) => `!loot ${encodeExport(items, to)}`;
+/** Une seule commande pour plusieurs objets ayant chacun leur destinataire : [{ item, to }]. */
+export const roll20CommandMulti = (entries) => `!loot ${entries.map((e) => encodeExport([e.item], e.to || null)).join(" ")}`;
 
 /* ------------------------------------------------------------------ */
 /* Validation des pools importés                                       */

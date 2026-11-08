@@ -1,20 +1,27 @@
 /**
  * Casino DnD — panneau du MJ (ApplicationV2, Foundry v12+).
+ * Onglets : Session (créer / suivre) · PJ (liste des personnages) · Historique.
  */
-import { RARITIES, rarityInfo, validatePool, normRarity } from "./engine.js";
-import { displayName } from "./overlay.js";
+import { RARITIES, rarityInfo, validatePool, normRarity, roll20CommandMulti } from "./engine.js";
+import { displayName, copyText, showCopyBox } from "./overlay.js";
 import { MODULE_ID, listSources, loadPool, saveCustomPool, deleteCustomPool } from "./sources.js";
-import { spin, replay, exportToRoll20 } from "./main.js";
+import { createSession, endSession, replay, getCharacters, setCharacters } from "./main.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 const LUCK_LABELS = { "-3": "😭", "-2": "😟", "-1": "😕", "0": "🙂", "1": "😊", "2": "😄", "3": "🤩", "4": "🍀", "5": "👑" };
+
+async function copy(text) {
+  if (await copyText(text)) ui.notifications.info("Commande Roll20 copiée. Colle-la dans le chat Roll20 !");
+  else showCopyBox(text);
+}
 
 export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static instance = null;
 
   static open() {
     if (!game.user.isGM) return ui.notifications.warn("Le Casino est réservé au MJ.");
+    game.modules.get(MODULE_ID).api?.board?.minimize();
     (this.instance ??= new CasinoApp()).render({ force: true });
   }
 
@@ -26,7 +33,11 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
     position: { width: 500, height: "auto" },
     actions: {
       tab: CasinoApp._onTab,
-      spin: CasinoApp._onSpin,
+      createSession: CasinoApp._onCreateSession,
+      endSession: CasinoApp._onEndSession,
+      showBoard: CasinoApp._onShowBoard,
+      addPj: CasinoApp._onAddPj,
+      removePj: CasinoApp._onRemovePj,
       importPool: CasinoApp._onImportPool,
       exportPool: CasinoApp._onExportPool,
       deletePool: CasinoApp._onDeletePool,
@@ -42,16 +53,12 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
   constructor(options = {}) {
     super(options);
     const saved = game.settings.get(MODULE_ID, "panelState") ?? {};
-    this.state = {
-      tab: "draw", sourceId: "builtin:tresor-donjon", count: 1, recipient: "", mode: "roulette",
-      luck: 0, minRarity: "common", unique: false, forced: "", ...saved
-    };
-    this.state.tab = "draw";
-    this.state.forced = "";
+    this.state = { sourceId: "builtin:tresor-donjon", count: 3, luck: 0, minRarity: "common", unique: false, ...saved, forced: "" };
+    this.tab = getCharacters().length ? "session" : "pj";
   }
 
   _saveState() {
-    const { tab, forced, ...rest } = this.state;
+    const { forced, ...rest } = this.state;
     game.settings.set(MODULE_ID, "panelState", rest);
   }
 
@@ -62,36 +69,42 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
     let pool = null, poolError = null;
     try { pool = await loadPool(s.sourceId); } catch (e) { poolError = e.message; }
 
-    const chars = String(game.settings.get(MODULE_ID, "characters") || "").split(",").map((x) => x.trim()).filter(Boolean);
-    const recipients = [{ value: "", label: "👥 Le groupe" }, ...chars.map((c) => ({ value: c, label: c }))];
-    if (s.recipient && !chars.includes(s.recipient)) s.recipient = "";
-
     const counts = {};
     for (const it of pool?.items ?? []) counts[normRarity(it.rarity)] = (counts[normRarity(it.rarity)] ?? 0) + 1;
     const poolInfo = poolError ?? [pool?.description, `${pool?.items.length ?? 0} objets — ` +
       RARITIES.filter((r) => counts[r.key]).map((r) => `${counts[r.key]} ${r.label.toLowerCase()}`).join(", ")]
       .filter(Boolean).join(" · ");
 
-    const forcedOptions = (pool?.items ?? []).map((it, i) => ({ value: String(i), label: `[${rarityInfo(it.rarity).label}] ${it.name.replace(/\{q\}\s*/g, "")}`, rank: RARITIES.findIndex((r) => r.key === normRarity(it.rarity)) }))
+    const forcedOptions = (pool?.items ?? [])
+      .map((it, i) => ({ value: String(i), label: `[${rarityInfo(it.rarity).label}] ${it.name.replace(/\{q\}\s*/g, "")}`, rank: RARITIES.findIndex((r) => r.key === normRarity(it.rarity)) }))
       .sort((a, b) => b.rank - a.rank || a.label.localeCompare(b.label));
+
+    const session = game.settings.get(MODULE_ID, "session") ?? {};
+    const opened = (session.chests ?? []).filter((c) => c.opened);
 
     const history = (game.settings.get(MODULE_ID, "history")?.entries ?? []).map((e) => ({
       id: e.id,
       date: new Date(e.date).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }),
-      recipient: e.recipient || "Le groupe",
       source: e.source,
-      items: e.items.map((it, idx) => ({ idx, name: displayName(it), rarity: normRarity(it.rarity), rarityLabel: rarityInfo(it.rarity).label }))
+      items: e.items.map((it, idx) => ({ idx, name: displayName(it), to: it.to || "—", rarity: normRarity(it.rarity), rarityLabel: rarityInfo(it.rarity).label }))
     }));
 
     const sel = (list, cur) => list.map((o) => ({ ...o, selected: String(o.value) === String(cur) }));
+    const pjs = getCharacters();
     return {
       state: s,
-      isDraw: s.tab === "draw",
+      tabSession: this.tab === "session",
+      tabPj: this.tab === "pj",
+      tabHistory: this.tab === "history",
+      pjs: pjs.map((name, i) => ({ name, i })),
+      pjCount: pjs.length,
+      noPj: !pjs.length,
+      sessionActive: !!session.active,
+      sessionInfo: session.active ? `${session.source} · ${opened.length}/${session.chests.length} coffres ouverts` : "",
+      sessionItems: opened.map((c) => ({ name: displayName(c.item), rarity: normRarity(c.item.rarity), to: c.to || "pas encore attribué" })),
       sources: sources.map((x) => ({ value: x.id, label: x.name, selected: x.id === s.sourceId })),
       isCustom: s.sourceId?.startsWith("custom:"),
       poolInfo,
-      recipients: sel(recipients, s.recipient),
-      modes: sel([{ value: "roulette", label: "🎡 Roulette (un objet après l'autre)" }, { value: "cards", label: "🃏 Cartes (toutes d'un coup)" }], s.mode),
       rarities: sel(RARITIES.map((r) => ({ value: r.key, label: r.key === "common" ? "Aucune" : `${r.label} ou mieux` })), s.minRarity),
       forcedOptions: sel(forcedOptions, s.forced),
       luckLabel: `${s.luck > 0 ? "+" : ""}${s.luck} ${LUCK_LABELS[String(s.luck)] ?? ""}`,
@@ -104,9 +117,9 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
   _onRender(context, options) {
     super._onRender?.(context, options);
     const root = this.element;
-    root.querySelectorAll("[name]").forEach((input) => {
+    root.querySelectorAll("[data-field]").forEach((input) => {
       input.addEventListener("change", (ev) => this._onField(ev.currentTarget));
-      if (input.name === "luck") {
+      if (input.dataset.field === "luck") {
         input.addEventListener("input", (ev) => {
           const v = Number(ev.currentTarget.value);
           const lbl = root.querySelector(".cdnd-luck-val");
@@ -114,12 +127,17 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
         });
       }
     });
+    const pjInput = root.querySelector("[data-pj-input]");
+    pjInput?.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") { ev.preventDefault(); CasinoApp._onAddPj.call(this); }
+    });
+    if (this.tab === "pj") pjInput?.focus();
   }
 
   _onField(input) {
-    const { name } = input;
+    const name = input.dataset.field;
     let value = input.type === "checkbox" ? input.checked : input.value;
-    if (name === "count") value = Math.max(1, Math.min(10, Number(value) || 1));
+    if (name === "count") value = Math.max(1, Math.min(12, Number(value) || 1));
     if (name === "luck") value = Number(value) || 0;
     this.state[name] = value;
     this._saveState();
@@ -129,22 +147,44 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
   /* ----------------------------- Actions ----------------------------- */
 
   static _onTab(event, target) {
-    this.state.tab = target.dataset.tab;
+    this.tab = target.dataset.tab;
     this.render();
   }
 
-  static async _onSpin() {
+  static async _onCreateSession() {
     const s = this.state;
     try {
-      await spin({
-        sourceId: s.sourceId, count: s.count, recipient: s.recipient || null, mode: s.mode,
-        luck: s.luck, minRarity: s.minRarity, unique: s.unique, forced: s.forced !== "" ? [s.forced] : []
-      });
-      if (s.forced !== "") { s.forced = ""; this.render(); }
+      await createSession({ sourceId: s.sourceId, count: s.count, luck: s.luck, minRarity: s.minRarity, unique: s.unique, forced: s.forced });
+      s.forced = "";
     } catch (e) {
       console.error(e);
       ui.notifications.error(`Casino : ${e.message}`);
     }
+  }
+
+  static async _onEndSession() {
+    const ok = await foundry.applications.api.DialogV2.confirm({
+      window: { title: "Terminer la session" },
+      content: "<p>Fermer le tableau des coffres pour tout le monde ? Les coffres encore fermés sont perdus. Les objets ouverts restent dans l'historique.</p>"
+    });
+    if (ok) await endSession();
+  }
+
+  static _onShowBoard() { game.modules.get(MODULE_ID).api.showBoard(); }
+
+  static async _onAddPj() {
+    const input = this.element.querySelector("[data-pj-input]");
+    const name = input?.value.trim();
+    if (!name) return;
+    await setCharacters([...getCharacters(), name]);
+    this.render();
+  }
+
+  static async _onRemovePj(event, target) {
+    const list = getCharacters();
+    list.splice(Number(target.dataset.i), 1);
+    await setCharacters(list);
+    this.render();
   }
 
   static _onImportPool() {
@@ -199,13 +239,13 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static _onCopyEntry(event, target) {
     const e = CasinoApp._entry(target);
-    if (e) exportToRoll20(e.items, e.recipient);
+    if (e) copy(roll20CommandMulti(e.items.map((it) => ({ item: it, to: it.to }))));
   }
 
   static _onCopyItem(event, target) {
     const e = CasinoApp._entry(target);
     const it = e?.items[Number(target.dataset.idx)];
-    if (it) exportToRoll20([it], e.recipient);
+    if (it) copy(roll20CommandMulti([{ item: it, to: it.to }]));
   }
 
   static _onReplay(event, target) {

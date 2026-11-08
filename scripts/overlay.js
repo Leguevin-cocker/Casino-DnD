@@ -4,6 +4,9 @@
  */
 import { RARITY_INDEX, rarityInfo, typeInfo, itemIcon, normRarity } from "./engine.js";
 import { Sfx } from "./sfx.js";
+import { CHEST_TIERS, CHEST_LABELS, chestBaseSVG, chestLidSVG, chestInsideSVG } from "./chest.js";
+
+const MAT_COLORS = { wood: "#c08a4a", bronze: "#e8995a", silver: "#e6eef6", gold: "#ffcf4a", gem: "#c58bff" };
 
 const DAMAGE_FR = {
   slashing: "tranchant", piercing: "perforant", bludgeoning: "contondant", fire: "feu", cold: "froid",
@@ -191,6 +194,7 @@ export class LootOverlay {
     this.root = null;
     this.fx?.destroy();
     root.classList.add("cdnd-closing");
+    document.body.classList.remove("cdnd-playing");
     setTimeout(() => root.remove(), 400);
   }
 
@@ -218,11 +222,13 @@ export class LootOverlay {
     skip.addEventListener("click", () => this.skip());
     this.$foot.append(skip);
     document.body.append(root);
+    document.body.classList.add("cdnd-playing");
     this.root = root;
     this.fx = new Fx(root.querySelector(".cdnd-fx"));
   }
 
   _setSub(recipient, i, n) {
+    if (this.payload?.subtitle) { this.$sub.textContent = this.payload.subtitle; return; }
     const who = recipient ? `Pour ${recipient}` : "Pour le groupe";
     this.$sub.textContent = n > 1 && i ? `${who} · Tirage ${i}/${n}` : who;
   }
@@ -252,7 +258,7 @@ export class LootOverlay {
 
   /** Lance l'animation complète. Résout quand le récap est affiché. */
   async play(payload) {
-    if (this.root) { this.root.remove(); this.root = null; this.fx?.destroy(); }
+    if (this.root) { this.root.remove(); this.root = null; this.fx?.destroy(); document.body.classList.remove("cdnd-playing"); }
     this._skip = false;
     this._closed = false;
     this.payload = payload;
@@ -265,13 +271,15 @@ export class LootOverlay {
     if (payload.mode === "cards") {
       await this._cards(results, payload);
     } else {
+      const step = payload.mode === "roulette" ? (r) => this._roulette(r, payload) : (r) => this._chest(r);
       for (let i = 0; i < results.length; i++) {
         if (this._closed) return;
         this._setSub(payload.recipient, i + 1, results.length);
-        await this._roulette(results[i], payload);
+        await step(results[i]);
       }
     }
     if (this._closed) return;
+    if (payload.noSummary) { this.close(); return; }
     this._summary(results.map((r) => r.item), payload);
   }
 
@@ -344,6 +352,112 @@ export class LootOverlay {
     const rect = cards[winIndex].getBoundingClientRect();
     this._celebrate({ ...item, rarity: r >= 3 ? "rare" : item.rarity }, rect.left + rect.width / 2, rect.top + rect.height / 2);
     await this._wait(r >= 3 ? 1100 : 750);
+    await this._reveal(item);
+  }
+
+  /* ---------------------------- Coffres ----------------------------- */
+
+  /**
+   * Un coffre en bois tombe, puis monte en gamme (bronze, argent, or, gemme)
+   * jusqu'à la rareté de l'objet, parfois avec une tentative ratée, et s'ouvre.
+   */
+  async _chest(result) {
+    const { item } = result;
+    const r = RARITY_INDEX[item.rarity];
+    const target = Math.min(r, CHEST_TIERS.length - 1);
+
+    const scene = el("div", `cdnd-chest-scene r-${item.rarity}`);
+    const chest = el("div", "cdnd-chest");
+    const aura = el("div", "cdnd-chest-aura");
+    const light = el("div", "cdnd-chest-light");
+    const prize = iconNode(item, "cdnd-chest-prize");
+    const base = el("div", "cdnd-chest-base");
+    const lid = el("div", "cdnd-chest-lid");
+    const lidFront = el("div", "cdnd-lid-face cdnd-lid-front");
+    const lidBack = el("div", "cdnd-lid-face cdnd-lid-back");
+    lid.append(lidFront, lidBack);
+    chest.append(aura, light, prize, base, lid);
+    const label = el("div", "cdnd-chest-label");
+    const dropper = el("div", "cdnd-chest-dropper");
+    dropper.append(chest);
+    scene.append(dropper, label);
+
+    const setMat = (mat) => {
+      chest.dataset.mat = mat;
+      chest.style.setProperty("--mc", MAT_COLORS[mat]);
+      base.innerHTML = chestBaseSVG(mat);
+      lidFront.innerHTML = chestLidSVG(mat);
+      lidBack.innerHTML = chestInsideSVG(mat);
+      label.textContent = CHEST_LABELS[mat];
+      label.style.setProperty("--mc", MAT_COLORS[mat]);
+    };
+    const center = () => {
+      const b = chest.getBoundingClientRect();
+      return [b.left + b.width / 2, b.top + b.height * 0.55];
+    };
+    const pop = () => { chest.classList.remove("is-pop"); void chest.offsetWidth; chest.classList.add("is-pop"); };
+
+    setMat(this._skip ? CHEST_TIERS[target] : "wood");
+    this.$content.replaceChildren(scene);
+    await frame();
+    dropper.classList.add("is-dropped");
+    await this._wait(420);
+    if (!this._skip) { this.sfx.thud(); this._shake(0.5); }
+    await this._wait(650);
+
+    for (let lvl = 1; lvl <= target && !this._skip && !this._closed; lvl++) {
+      const mat = CHEST_TIERS[lvl];
+      chest.style.setProperty("--next", MAT_COLORS[mat]);
+      chest.style.setProperty("--charge", String(lvl));
+      chest.classList.add("is-charging");
+      this.sfx.charge(lvl);
+      if (lvl >= 3) { this.sfx.heartbeat(); setTimeout(() => !this._skip && this.sfx.heartbeat(), 700); }
+      await this._wait(lvl >= 4 ? 1500 : lvl >= 3 ? 1150 : 900);
+      chest.classList.remove("is-charging");
+      if (this._skip) break;
+      this._flash(MAT_COLORS[mat]);
+      setMat(mat);
+      pop();
+      this.sfx.upgrade(lvl);
+      const [x, y] = center();
+      this.fx.burst(x, y, [MAT_COLORS[mat], "#ffffff"], { count: 40 + lvl * 25, speed: 5 + lvl * 1.5 });
+      if (lvl >= 3) this._shake(lvl - 2);
+      if (lvl >= 4) this.fx.confetti([...GOLD, "#c9fbff", "#ff5fd2", "#8a6bff"]);
+      await this._wait(lvl >= 4 ? 1100 : 700);
+    }
+
+    // « Allez… encore un… » : fausse montée en gamme
+    if (!this._skip && !this._closed && target < CHEST_TIERS.length - 1 && Math.random() < 0.45) {
+      chest.style.setProperty("--next", MAT_COLORS[CHEST_TIERS[target + 1]]);
+      chest.style.setProperty("--charge", String(target + 1));
+      chest.classList.add("is-charging");
+      this.sfx.charge(target + 1);
+      await this._wait(950);
+      chest.classList.remove("is-charging");
+      chest.classList.add("is-fizzle");
+      this.sfx.fizzle();
+      const [x, y] = center();
+      this.fx.burst(x, y - 40, ["#777", "#999", "#555"], { count: 30, speed: 2.5, gravity: -0.05, size: 6, life: 1.4 });
+      await this._wait(800);
+      chest.classList.remove("is-fizzle");
+    }
+    if (this._skip) setMat(CHEST_TIERS[target]);
+    if (this._closed) return;
+
+    // ouverture
+    chest.classList.add("is-rattle");
+    await this._wait(520);
+    chest.classList.remove("is-rattle");
+    chest.style.setProperty("--rc-open", rarityInfo(item.rarity).color);
+    chest.classList.add("is-open");
+    if (!this._skip) {
+      this.sfx.creak();
+      this.sfx.land(r);
+      await sleep(280);
+      const [x, y] = center();
+      this._celebrate(r >= 3 ? { ...item, rarity: "rare" } : item, x, y - 30);
+    }
+    await this._wait(r >= 3 ? 1400 : 1100);
     await this._reveal(item);
   }
 

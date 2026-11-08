@@ -16,7 +16,7 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           jq --arg v "$VERSION" '.version = $v' module.json > module.tmp && mv module.tmp module.json
       - name: Zip
-        run: zip -r casino-dnd.zip module.json scripts styles templates data
+        run: zip -r casino-dnd.zip module.json scripts styles templates data assets
       - uses: softprops/action-gh-release@v2
         with:
           files: |

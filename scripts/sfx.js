@@ -112,6 +112,40 @@ export class Sfx {
     }
   }
 
+  /** Le coffre tombe sur la table. */
+  thud() {
+    this._tone({ freq: 95, type: "sine", dur: 0.35, vol: 0.6, slideTo: 45 });
+    this._noise({ dur: 0.22, vol: 0.25, from: 600, to: 150, q: 1 });
+  }
+
+  /** Le coffre se charge d'énergie avant une amélioration. */
+  charge(level = 0) {
+    const d = 0.9;
+    this._noise({ dur: d, vol: 0.12 + level * 0.03, from: 300 + level * 100, to: 3000 + level * 800, q: 6 });
+    this._tone({ freq: 160 + level * 40, type: "sawtooth", dur: d, vol: 0.07, slideTo: 700 + level * 150, filter: 1800 });
+  }
+
+  /** Amélioration réussie (bois -> bronze -> argent -> or -> gemme). */
+  upgrade(level = 1) {
+    const base = 392 * Math.pow(1.26, level - 1);
+    [1, 1.25, 1.5, 2].forEach((m, i) => this._tone({ freq: base * m, type: "triangle", start: i * 0.05, dur: 0.6, vol: 0.16 }));
+    this._tone({ freq: base * 4, type: "sine", start: 0.18, dur: 0.8, vol: 0.06 });
+    this._noise({ dur: 0.3, vol: 0.15, from: 5000, to: 1500, q: 2 });
+    if (level >= 4) this._shimmer(0.2, 4);
+  }
+
+  /** Tentative ratée : « pfffft ». */
+  fizzle() {
+    this._tone({ freq: 500, type: "sawtooth", dur: 0.6, vol: 0.08, slideTo: 90, filter: 1200 });
+    this._noise({ dur: 0.5, vol: 0.12, from: 2000, to: 300, q: 1 });
+  }
+
+  /** Grincement du couvercle. */
+  creak() {
+    this._tone({ freq: 140, type: "sawtooth", dur: 0.45, vol: 0.07, slideTo: 260, filter: 900 });
+    this._tone({ freq: 210, type: "square", start: 0.08, dur: 0.3, vol: 0.03, slideTo: 330, filter: 700 });
+  }
+
   fanfare(start = 0) {
     const notes = [[392, 0], [523.25, 0.16], [659.25, 0.32], [783.99, 0.48], [1046.5, 0.7]];
     for (const [f, s] of notes) {

@@ -1,6 +1,12 @@
 # 🎰 Casino DnD — loot animé pour Foundry, importable dans Roll20
 
-Le MJ lance un tirage dans **Foundry VTT** : chez tous les joueurs connectés, une roulette façon casino s'emballe, ralentit (le cœur bat si c'est très rare), s'arrête, et la carte de l'objet se retourne avec un effet adapté à la rareté : rayons, confettis et fanfare pour un légendaire. Le MJ copie ensuite une commande et la colle dans **Roll20** : l'objet arrive dans l'inventaire de la fiche, avec un handout et une carte dans le chat.
+Le MJ crée une **session de coffres** dans **Foundry VTT**. Chez tous les joueurs connectés s'affiche un tableau de coffres fermés. Quand le groupe est prêt, quelqu'un clique sur un coffre et l'animation passe au premier plan chez tout le monde :
+
+- le coffre en bois tombe sur la table ;
+- il monte en gamme, palier par palier, jusqu'à la rareté de l'objet : bois (commun) → bronze (peu commun) → argent (rare) → or (très rare) → gemme (légendaire). Parfois une tentative de plus échoue dans un « pfff » ;
+- il s'ouvre et la carte de l'objet se retourne.
+
+Le coffre reprend ensuite sa place sur le tableau, ouvert, avec l'objet. En dessous, un menu permet de choisir le PJ, et la commande à coller dans **Roll20** apparaît. L'objet arrive alors dans l'inventaire de la fiche, avec un handout et une carte dans le chat.
 
 ```
 Foundry (tirage + animations)  ──📋 !loot CDND1.xxxx──▶  Roll20 (fiche, handout, chat)
@@ -12,6 +18,7 @@ Foundry (tirage + animations)  ──📋 !loot CDND1.xxxx──▶  Roll20 (fic
 |---|---|
 | `module.json`, `scripts/`, `styles/`, `templates/`, `data/` | Le module Foundry (v12 et v13) |
 | `roll20/CasinoLootImport.js` | Le script Mod (API) Roll20 pour l'import |
+| `assets/join-background.jpg` | L'image de l'écran de connexion (« Le Casino interplanaire de Hugoblin ») |
 | `demo/` | Une page pour voir les animations sans Foundry |
 
 ---
@@ -32,34 +39,44 @@ Ensuite, dans ton monde : *Gérer les modules → Casino DnD → activer*.
 
 ### Réglages (Paramètres du jeu → Casino DnD)
 
-- **Personnages (noms Roll20)** : `Thorin, Elara, Grub`, etc. Ils remplissent la liste « Destinataire », et le script Roll20 s'en sert pour trouver la bonne fiche. Mets les noms exacts de Roll20.
+- **Titre du Casino** : par défaut « Le Casino interplanaire de Hugoblin ».
 - **Poids des raretés** : `60,25,10,4,1,0` pour commun, peu commun, rare, très rare, légendaire et artefact.
-- **Durée de la roulette**, **Titre**, **Annonce dans le chat Foundry**.
+- **Les joueurs voient la commande Roll20** : désactivé par défaut, seul le MJ la voit.
+- **Annonce dans le chat Foundry**.
 - **Volume** : réglage propre à chaque joueur.
 
-## 2. Faire un tirage
+## 2. Le panneau du MJ
 
-Clique sur le bouton 🎲 **Casino** dans la barre d'outils des jetons, à gauche (visible seulement par le MJ).
+Clique sur le bouton 🎲 **Casino** dans la barre d'outils des jetons, à gauche. Chez les joueurs, ce même bouton réaffiche le tableau des coffres s'ils l'ont réduit.
 
+### 👥 PJ
+Ajoute tes personnages un par un, avec leur nom **exact sur Roll20**. Ce sont eux qui apparaissent dans le menu sous chaque coffre ouvert.
+
+### 🎁 Session
 - **Source** : un pool fourni (🎰 *Trésor de donjon*, *Coffre du boss*, *Échoppe de l'apothicaire*), un pool que tu as importé (📦), ou **n'importe quelle table aléatoire de ton monde** (🎲). Les objets dnd5e liés dans une table sont convertis automatiquement (rareté, dégâts, CA, prix, description).
-- **Destinataire** : un perso, ou « Le groupe ».
-- **Nombre d'objets** : de 1 à 10.
-- **Animation** :
-  - 🎡 *Roulette* : un tirage après l'autre.
-  - 🃏 *Cartes* : toutes les cartes sont distribuées face cachée puis retournées une à une. Elles brillent de la couleur de leur rareté juste avant de se retourner.
+- **Nombre de coffres** : de 1 à 12.
 - **Chance** : de -3 à +5. Fait pencher la balance vers les raretés hautes (ou basses).
 - **Rareté minimale** : pour un coffre de boss garanti.
-- **Truquer 😈** : impose le premier objet. Les joueurs voient une roulette parfaitement normale.
+- **Truquer 😈** : cache l'objet choisi dans un des coffres, au hasard.
+- **Créer la session** : le tableau s'ouvre chez tout le monde.
 
-À la fin, l'écran récapitulatif affiche le butin. Seul le MJ voit les boutons **📋 Roll20** (par objet, ou « Tout copier »). L'onglet **Historique** garde les 50 derniers tirages : tu peux y recopier une commande ou rejouer l'animation.
+Le contenu des coffres est tiré dès la création, mais il reste **dans le navigateur du MJ** : un joueur ne peut pas le lire en avance. Il faut donc que le MJ soit connecté, et sur le même navigateur, pendant la session.
+
+Pendant la session :
+- **Ouverture** : n'importe qui (joueur ou MJ) clique sur un coffre fermé. Un seul coffre s'ouvre à la fois : les autres sont verrouillés pendant l'animation.
+- **Attribution** : sous un coffre ouvert, le menu **« Pour quel PJ ? »** choisit le destinataire. La commande Roll20 juste en dessous se met à jour, avec le bouton 📋 pour la copier.
+- **Tout copier** : *📋 Copier toutes les commandes Roll20* donne **une seule commande** pour tous les coffres ouverts, chaque objet partant vers son PJ.
+- **Fin** : *Terminer la session* ferme le tableau chez tout le monde.
+- **Historique** : l'onglet 📜 garde les sessions (objet → PJ) et permet de recopier une commande ou de rejouer l'animation.
 
 Pour une macro :
 
 ```js
-game.modules.get("casino-dnd").api.open();                // ouvre le panneau
-game.modules.get("casino-dnd").api.spin({                 // tirage direct
-  sourceId: "builtin:coffre-boss", count: 3, recipient: "Thorin", mode: "cards", luck: 2
-});
+const casino = game.modules.get("casino-dnd").api;
+casino.open();                                                       // ouvre le panneau
+casino.createSession({ sourceId: "builtin:coffre-boss", count: 4, luck: 2 });
+// tirage direct sans tableau ; mode "chest" (défaut), "roulette" ou "cards"
+casino.spin({ sourceId: "builtin:tresor-donjon", count: 2, recipient: "Thorin", mode: "roulette" });
 ```
 
 ### Tes propres pools
@@ -128,7 +145,19 @@ Le script accepte aussi du **JSON brut**, pratique pour un objet généré aille
 
 > **Fiche 2024** : la fiche « D&D 2024 by Roll20 » ne se remplit pas par attributs. Dans ce cas, lance `!loot --config sheet off`. La carte de chat et le handout fonctionnent quand même, et le joueur ajoute l'objet à la main.
 
-## 4. Voir la démo sans Foundry
+## 4. L'écran de connexion
+
+Le fichier `assets/join-background.jpg` (1920×1080) contient le marbre, le titre « Le Casino interplanaire de Hugoblin » en or gravé, les deux personnages de part et d'autre de la zone de connexion, et la bannière en bas.
+
+Dans Foundry, sur l'écran d'accueil (setup) : *Game Worlds* → ton monde → **Edit World** → **Background Image**. Indique :
+
+```
+modules/casino-dnd/assets/join-background.jpg
+```
+
+Foundry ne permet pas de modifier le HTML ou le CSS de l'écran de connexion. C'est donc une image de fond, et Foundry place son formulaire par-dessus. Sur un écran qui n'est pas en 16:9, les bords sont un peu rognés.
+
+## 5. Voir la démo sans Foundry
 
 ```bash
 python3 -m http.server   # à la racine du dépôt
