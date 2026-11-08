@@ -19,6 +19,11 @@ async function builtinPools() {
   if (!builtinCache) {
     const res = await fetch(`${PKG_PATH}/data/pools.json`);
     builtinCache = (await res.json()).map(validatePool);
+    // pools supplémentaires installés à la main (ex : objets d'un PDF), facultatifs
+    try {
+      const extra = await fetch(`${PKG_PATH}/data/extra-pools.json`);
+      if (extra.ok) builtinCache.push(...(await extra.json()).map(validatePool));
+    } catch { /* pas de pools en plus */ }
   }
   return builtinCache;
 }

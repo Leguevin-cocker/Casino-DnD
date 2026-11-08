@@ -171,6 +171,12 @@ python3 -m http.server   # à la racine du dépôt
 # puis ouvre http://localhost:8000/demo/
 ```
 
+## Le présentateur et les pools perso
+
+Deux fichiers sont lus s'ils existent, mais **ne sont pas dans le dépôt** (ressources personnelles, voir `.gitignore`) :
+- `assets/presenter.png` : l'image du présentateur, détourée sur fond transparent. Elle apparaît pendant les animations et à côté du tableau des coffres, avec ses répliques. Le réglage *Afficher le présentateur* permet de le masquer.
+- `data/extra-pools.json` : des pools en plus, au même format que `data/pools.json`. Ils apparaissent dans la liste des sources.
+
 ## Notes
 
 - Les sons sont générés à la volée (WebAudio) : aucun fichier audio à fournir.

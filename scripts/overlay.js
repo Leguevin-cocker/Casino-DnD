@@ -5,6 +5,8 @@
 import { RARITY_INDEX, rarityInfo, typeInfo, itemIcon, normRarity } from "./engine.js";
 import { Sfx } from "./sfx.js";
 import { CHEST_TIERS, CHEST_LABELS, chestBaseSVG, chestLidSVG, chestInsideSVG } from "./chest.js";
+import { curtainDataURL, sideDrapeDataURL, valanceDataURL, floorDataURL } from "./curtain.js";
+import { Presenter, LINES, pick } from "./presenter.js";
 
 const MAT_COLORS = { wood: "#c08a4a", bronze: "#e8995a", silver: "#e6eef6", gold: "#ffcf4a", gem: "#c58bff" };
 
@@ -202,7 +204,12 @@ export class LootOverlay {
     const root = el("div", "cdnd-overlay");
     root.innerHTML = `
       <div class="cdnd-bg"><div class="cdnd-bg-glow"></div><div class="cdnd-bg-felt"></div></div>
+      <div class="cdnd-stageframe">
+        <div class="cdnd-spot"></div><div class="cdnd-floor"></div>
+        <div class="cdnd-drape cdnd-left"></div><div class="cdnd-drape cdnd-right"></div><div class="cdnd-valance"></div>
+      </div>
       <canvas class="cdnd-fx"></canvas>
+      <div class="cdnd-curtain"><div class="cdnd-curtain-title"></div></div>
       <div class="cdnd-stage">
         <header class="cdnd-head">
           <div class="cdnd-title"></div>
@@ -221,8 +228,17 @@ export class LootOverlay {
     const skip = el("button", "cdnd-btn cdnd-ghost", "Passer ⏩");
     skip.addEventListener("click", () => this.skip());
     this.$foot.append(skip);
+    const bg = (sel, url) => { const n = root.querySelector(sel); if (n) n.style.backgroundImage = `url(${url})`; };
+    bg(".cdnd-valance", valanceDataURL());
+    bg(".cdnd-floor", floorDataURL());
+    root.querySelectorAll(".cdnd-drape").forEach((d) => { d.style.backgroundImage = `url(${sideDrapeDataURL()})`; });
+    bg(".cdnd-curtain", curtainDataURL());
+    root.querySelector(".cdnd-curtain-title").textContent = String(payload.title || "Le Casino").replace(/^[\p{Extended_Pictographic}\uFE0F\s]+/u, "");
+    this.$curtain = root.querySelector(".cdnd-curtain");
     document.body.append(root);
     document.body.classList.add("cdnd-playing");
+    this.presenter = new Presenter(this.opts.presenterSrc);
+    this.presenter.mount(root);
     this.root = root;
     this.fx = new Fx(root.querySelector(".cdnd-fx"));
   }
@@ -256,6 +272,23 @@ export class LootOverlay {
     if (r >= 4) { this.fx.confetti([...GOLD, c]); setTimeout(() => this.fx?.confetti(GOLD, 100), 900); }
   }
 
+  async _curtainDown() {
+    if (this._skip || this._closed || !this.$curtain) return;
+    this.$curtain.classList.add("is-down");
+    this.sfx.whoosh();
+    await this._wait(620);
+    if (!this._skip) { this.sfx.thud(); this._shake(0.4); }
+    await this._wait(200);
+  }
+  async _curtainUp() {
+    if (!this.$curtain) return;
+    this.$curtain.classList.remove("is-down");
+    if (this._skip || this._closed) return;
+    this.sfx.whoosh();
+    await this._wait(850);
+  }
+  _say(text, mood) { this.presenter?.say(text, mood); }
+
   /** Lance l'animation complète. Résout quand le récap est affiché. */
   async play(payload) {
     if (this.root) { this.root.remove(); this.root = null; this.fx?.destroy(); document.body.classList.remove("cdnd-playing"); }
@@ -266,8 +299,11 @@ export class LootOverlay {
     const results = payload.results || [];
     this._setSub(payload.recipient, 0, results.length);
     this.root.classList.add("cdnd-intro");
-    this.sfx.whoosh();
-    await this._wait(650);
+    await this._curtainDown();
+    this._say(pick(LINES.intro), "excited");
+    await this._wait(1900);
+    await this._curtainUp();
+    this._say(pick(LINES.start));
     if (payload.mode === "cards") {
       await this._cards(results, payload);
     } else {
@@ -279,7 +315,13 @@ export class LootOverlay {
       }
     }
     if (this._closed) return;
-    if (payload.noSummary) { this.close(); return; }
+    if (payload.noSummary) {
+      this._say(pick(LINES.outro));
+      await this._curtainDown();
+      await this._wait(700);
+      this.close();
+      return;
+    }
     this._summary(results.map((r) => r.item), payload);
   }
 
@@ -419,6 +461,7 @@ export class LootOverlay {
       setMat(mat);
       pop();
       this.sfx.upgrade(lvl);
+      this._say(pick(LINES[mat] ?? LINES.bronze), lvl >= 3 ? "excited" : "talk");
       const [x, y] = center();
       this.fx.burst(x, y, [MAT_COLORS[mat], "#ffffff"], { count: 40 + lvl * 25, speed: 5 + lvl * 1.5 });
       if (lvl >= 3) this._shake(lvl - 2);
@@ -436,6 +479,7 @@ export class LootOverlay {
       chest.classList.remove("is-charging");
       chest.classList.add("is-fizzle");
       this.sfx.fizzle();
+      this._say(pick(LINES.fizzle), "sad");
       const [x, y] = center();
       this.fx.burst(x, y - 40, ["#777", "#999", "#555"], { count: 30, speed: 2.5, gravity: -0.05, size: 6, life: 1.4 });
       await this._wait(800);
@@ -450,6 +494,7 @@ export class LootOverlay {
     chest.classList.remove("is-rattle");
     chest.style.setProperty("--rc-open", rarityInfo(item.rarity).color);
     chest.classList.add("is-open");
+    this._say(pick(LINES.open[item.rarity] ?? LINES.open.common), r >= 3 ? "excited" : r === 0 ? "sad" : "talk");
     if (!this._skip) {
       this.sfx.creak();
       this.sfx.land(r);

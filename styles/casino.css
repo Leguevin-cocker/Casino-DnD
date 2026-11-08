@@ -445,3 +445,74 @@ body.cdnd-playing .cdnd-board { visibility: hidden; }
 }
 .cdnd-slot-code .cdnd-btn { flex: 0 0 auto; }
 .cdnd-slot-warn { font-size: 10.5px; color: #e6b450; text-align: center; }
+
+/* ==================================================================
+   Scène de théâtre, rideau et présentateur
+   ================================================================== */
+.cdnd-stageframe { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.cdnd-stageframe > div, .cdnd-curtain { background-size: 100% 100%; background-repeat: no-repeat; image-rendering: pixelated; }
+.cdnd-valance { position: absolute; top: 0; left: 0; right: 0; height: 12vh; filter: drop-shadow(0 6px 10px rgba(0,0,0,.6)); }
+.cdnd-drape { position: absolute; top: 0; bottom: 0; width: 15vw; filter: drop-shadow(0 0 18px rgba(0,0,0,.7)); }
+.cdnd-drape.cdnd-left { left: 0; }
+.cdnd-drape.cdnd-right { right: 0; transform: scaleX(-1); }
+.cdnd-floor { position: absolute; left: 0; right: 0; bottom: 0; height: 17vh; opacity: .95; }
+.cdnd-spot {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 26% 75% at 50% 0%, rgba(255, 240, 200, .16), transparent 72%),
+              radial-gradient(ellipse 22% 8% at 50% 84%, rgba(255, 230, 170, .22), transparent 70%) !important;
+}
+
+.cdnd-curtain {
+  position: absolute; inset: 0; z-index: 4; transform: translateY(-103%);
+  transition: transform .62s cubic-bezier(.55,0,.55,1.18);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,.8);
+}
+.cdnd-curtain.is-down { transform: none; }
+.cdnd-curtain:not(.is-down) { transition: transform .85s cubic-bezier(.6,0,.85,.45); }
+.cdnd-curtain-title {
+  font-family: var(--font-title); font-size: clamp(34px, 5.4vw, 76px); text-align: center; max-width: 70vw; line-height: 1.05;
+  background: linear-gradient(180deg, #fff6d0 0%, #ffcf4a 45%, #b8860b 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 4px 0 rgba(40,0,0,.85)) drop-shadow(0 0 22px rgba(255, 190, 40, .45));
+  opacity: 0; transform: scale(.9); transition: opacity .4s .35s, transform .5s .35s;
+}
+.cdnd-curtain.is-down .cdnd-curtain-title { opacity: 1; transform: none; }
+
+/* le présentateur */
+.cdnd-presenter {
+  position: absolute; left: 1.5vw; bottom: 0; z-index: 5; height: 44vh; aspect-ratio: 701 / 886;
+  transform: translateX(-130%) rotate(-8deg); transition: transform .7s cubic-bezier(.2,1.4,.4,1);
+  pointer-events: none;
+}
+.cdnd-presenter.is-in { transform: none; }
+.cdnd-presenter img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 10px 18px rgba(0,0,0,.6)); transform-origin: 50% 100%; }
+.cdnd-presenter.m-talk.is-saying img { animation: cdnd-host-talk .5s ease-in-out 3; }
+.cdnd-presenter.m-excited.is-saying img { animation: cdnd-host-jump .45s cubic-bezier(.3,1.6,.5,1) 4; }
+.cdnd-presenter.m-sad img { transform: rotate(-6deg) translateY(4%); filter: drop-shadow(0 10px 18px rgba(0,0,0,.6)) saturate(.7); transition: transform .4s; }
+@keyframes cdnd-host-talk { 50% { transform: rotate(2deg) scaleY(1.02); } }
+@keyframes cdnd-host-jump { 40% { transform: translateY(-9%) rotate(-3deg) scale(1.03); } 100% { transform: none; } }
+.cdnd-bubble {
+  position: absolute; left: 62%; top: 2%; width: max-content; max-width: min(330px, 30vw);
+  font: 700 17px/1.3 var(--font-body, sans-serif); color: #2a1b00;
+  background: #fffaf0; border: 3px solid #2a1b00; border-radius: 18px; padding: 10px 14px;
+  box-shadow: 4px 4px 0 rgba(0,0,0,.45);
+  opacity: 0; transform: scale(.6) translateY(10px); transform-origin: 0% 100%; transition: opacity .2s, transform .25s cubic-bezier(.2,1.6,.4,1);
+}
+.cdnd-bubble::after {
+  content: ""; position: absolute; left: 14px; bottom: -16px; border: 8px solid transparent; border-top: 10px solid #2a1b00; border-left: 10px solid #2a1b00;
+}
+.cdnd-presenter.is-saying .cdnd-bubble { opacity: 1; transform: none; }
+.cdnd-presenter.m-excited .cdnd-bubble { background: #ffe58a; font-size: 19px; }
+
+/* sur le tableau des coffres */
+.cdnd-board-host { position: fixed; height: 34vh; left: .5vw; bottom: 0; z-index: 2; transition: none; transform: none; }
+.cdnd-board.is-min .cdnd-board-host { display: none; }
+@media (max-width: 1100px) { .cdnd-board-host { display: none; } }
+@media (max-width: 900px) { .cdnd-presenter { height: 28vh; } .cdnd-bubble { font-size: 13px; } }
+.cdnd-board:has(.cdnd-board-host) .cdnd-board-panel { width: min(1120px, 78vw); margin-left: 16vw; }
+@media (max-width: 1100px) { .cdnd-board:has(.cdnd-board-host) .cdnd-board-panel { width: min(1180px, 96vw); margin-left: 0; } }
+.cdnd-board-host .cdnd-bubble { left: 55%; }
+.cdnd-presenter .cdnd-bubble { z-index: 2; left: 74%; top: 6%; }
+.cdnd-board-host .cdnd-bubble { left: 70%; top: 8%; }
+.cdnd-overlay .cdnd-bg { background: rgba(4, 8, 6, .95); }

@@ -5,6 +5,7 @@
 import { rarityInfo, roll20Command, roll20CommandMulti, RARITY_INDEX, itemIcon } from "./engine.js";
 import { chestBaseSVG, chestLidSVG, chestInsideSVG, CHEST_TIERS } from "./chest.js";
 import { displayName, typeLine, statLine } from "./overlay.js";
+import { Presenter, LINES } from "./presenter.js";
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -95,6 +96,14 @@ export class SessionBoard {
       panel.append(foot);
     }
     root.append(panel);
+
+    // le présentateur, à côté du tableau
+    if (this.o.presenterSrc) {
+      const host = new Presenter(this.o.presenterSrc, "cdnd-presenter cdnd-board-host");
+      host.mount(root);
+      const list = opened === total ? LINES.done : LINES.board;
+      host.say(busy ? "Chuuut… ça s'ouvre !" : list[opened % list.length], "talk", 0);
+    }
   }
 
   _chestNode(mat, open, item) {

@@ -46,16 +46,23 @@
   import { LootOverlay, copyText, showCopyBox } from "../scripts/overlay.js";
   import { SessionBoard } from "../scripts/board.js";
 
-  const POOLS = (window.CDND_POOLS ?? await (await fetch("../data/pools.json")).json()).map(validatePool);
+  let RAW = window.CDND_POOLS;
+  if (!RAW) {
+    RAW = await (await fetch("../data/pools.json")).json();
+    try { const x = await fetch("../data/extra-pools.json"); if (x.ok) RAW.push(...(await x.json())); } catch {}
+  }
+  const POOLS = RAW.map(validatePool);
   const $ = (id) => document.getElementById(id);
   for (const p of POOLS) $("pool").append(new Option(p.name, p.id));
   const TITLE = "Le Casino interplanaire de Hugoblin";
 
-  const overlay = new LootOverlay({ isGM: true, volume: 0.6 });
+  const PRESENTER = window.CDND_PRESENTER ?? "../assets/presenter.png";
+  const overlay = new LootOverlay({ isGM: true, volume: 0.6, presenterSrc: PRESENTER });
   let state = { active: false };
   let secret = [];
 
   const board = new SessionBoard({
+    presenterSrc: PRESENTER,
     isGM: true,
     getCharacters: () => $("pjs").value.split(",").map((s) => s.trim()).filter(Boolean),
     onOpen: async (i) => {

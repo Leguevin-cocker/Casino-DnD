@@ -56,6 +56,11 @@ Hooks.once("init", () => {
     scope: "world", config: true, type: Boolean, default: false,
     onChange: () => board?.render(setting("session"))
   });
+  reg("presenter", {
+    name: "Afficher le présentateur",
+    hint: "Le présentateur du casino (image assets/presenter.png du paquet). Rechargez la page après changement.",
+    scope: "world", config: true, type: Boolean, default: true
+  });
   reg("postToChat", {
     name: "Annoncer le butin dans le chat Foundry", scope: "world", config: true, type: Boolean, default: true
   });
@@ -100,7 +105,9 @@ Hooks.on("getSceneControlButtons", (controls) => {
 /* Prêt : overlay, tableau, socket, API                                 */
 /* ------------------------------------------------------------------ */
 Hooks.once("ready", () => {
+  const presenterSrc = setting("presenter") ? `${PKG_PATH}/assets/presenter.png` : null;
   overlay = new LootOverlay({
+    presenterSrc,
     volume: setting("volume"),
     isGM: game.user.isGM,
     onExport: (items, payload) => exportToRoll20(items, payload?.recipient),
@@ -108,6 +115,7 @@ Hooks.once("ready", () => {
   });
 
   board = new SessionBoard({
+    presenterSrc,
     isGM: game.user.isGM,
     getCharacters,
     showCode: () => setting("playersSeeCode"),
