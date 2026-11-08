@@ -2,7 +2,7 @@
   "id": "casino",
   "title": "Casino",
   "description": "Le Casino interplanaire de Hugoblin : sessions de coffres de loot animés (bois, bronze, argent, or, gemme), partagées avec tous les joueurs, avec export vers Roll20.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "authors": [
     {
       "name": "Leguevin-cocker"
