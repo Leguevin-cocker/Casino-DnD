@@ -1,0 +1,89 @@
+<div class="cdnd-panel">
+  <nav class="cdnd-tabs">
+    <button type="button" data-action="tab" data-tab="draw" class="{{#if isDraw}}active{{/if}}">🎰 Tirage</button>
+    <button type="button" data-action="tab" data-tab="history" class="{{#unless isDraw}}active{{/unless}}">📜 Historique ({{historyCount}})</button>
+  </nav>
+
+  {{#if isDraw}}
+  <section>
+    <div class="cdnd-row">
+      <label>Source</label>
+      <select name="sourceId">
+        {{#each sources}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+      </select>
+    </div>
+    <p class="cdnd-poolinfo">{{poolInfo}}</p>
+
+    <div class="cdnd-row">
+      <label>Destinataire</label>
+      <select name="recipient">
+        {{#each recipients}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+      </select>
+    </div>
+    <div class="cdnd-row">
+      <label>Nombre d'objets</label>
+      <input type="number" name="count" min="1" max="10" step="1" value="{{state.count}}">
+    </div>
+    <div class="cdnd-row">
+      <label>Animation</label>
+      <select name="mode">
+        {{#each modes}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+      </select>
+    </div>
+    <div class="cdnd-row">
+      <label>Chance</label>
+      <input type="range" name="luck" min="-3" max="5" step="1" value="{{state.luck}}">
+      <span class="cdnd-luck-val">{{luckLabel}}</span>
+    </div>
+    <div class="cdnd-row">
+      <label>Rareté minimale</label>
+      <select name="minRarity">
+        {{#each rarities}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+      </select>
+    </div>
+    <div class="cdnd-row">
+      <label>Sans doublons</label>
+      <input type="checkbox" name="unique" {{#if state.unique}}checked{{/if}}>
+    </div>
+    <div class="cdnd-row">
+      <label>Truquer 😈</label>
+      <select name="forced">
+        <option value="">— Au hasard —</option>
+        {{#each forcedOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+      </select>
+    </div>
+    <p class="cdnd-hint-txt">Le 1er objet tiré sera celui-là. Les joueurs verront une roulette tout à fait normale.</p>
+
+    <button type="button" class="cdnd-spin" data-action="spin">🎰 Lancer le tirage</button>
+
+    <div class="cdnd-tools">
+      <button type="button" data-action="importPool"><i class="fa-solid fa-file-import"></i> Importer un pool JSON</button>
+      <button type="button" data-action="exportPool"><i class="fa-solid fa-file-export"></i> Exporter ce pool</button>
+      {{#if isCustom}}<button type="button" data-action="deletePool"><i class="fa-solid fa-trash"></i> Supprimer</button>{{/if}}
+    </div>
+  </section>
+
+  {{else}}
+  <section class="cdnd-history">
+    {{#each history}}
+    <div class="cdnd-h-entry" data-entry="{{id}}">
+      <div class="cdnd-h-head"><span>{{date}} · <b>{{recipient}}</b></span><span>{{source}}</span></div>
+      {{#each items}}
+      <div class="cdnd-h-item r-{{rarity}}">
+        <span class="cdnd-dot" title="{{rarityLabel}}"></span>
+        <span class="name">{{name}}</span>
+        <button type="button" data-action="copyItem" data-idx="{{idx}}" title="Copier la commande Roll20 pour cet objet">📋</button>
+      </div>
+      {{/each}}
+      <div class="cdnd-h-actions">
+        <button type="button" data-action="replay">🔁 Rejouer l'animation</button>
+        <button type="button" data-action="copyEntry">📋 Tout copier (Roll20)</button>
+      </div>
+    </div>
+    {{else}}
+    <div class="cdnd-empty">Aucun tirage pour l'instant. Le Casino attend ses premiers clients…</div>
+    {{/each}}
+    {{#if hasHistory}}<button type="button" data-action="clearHistory"><i class="fa-solid fa-broom"></i> Vider l'historique</button>{{/if}}
+  </section>
+  {{/if}}
+</div>

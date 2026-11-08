@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Casino DnD — démo des animations</title>
+<link rel="stylesheet" href="../styles/casino.css">
+<style>
+  body { margin: 0; min-height: 100vh; font-family: system-ui, sans-serif; color: #eee;
+         background: #1b1d1c url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cpath d='M0 0h40v40H0z' fill='none' stroke='%23333' stroke-width='.5'/%3E%3C/svg%3E"); }
+  .demo { max-width: 640px; margin: 0 auto; padding: 40px 20px; }
+  h1 { margin: 0 0 4px; font-size: 26px; }
+  p { color: #aaa; margin: 0 0 20px; }
+  .card { background: #262a28; border: 1px solid #3a3f3c; border-radius: 12px; padding: 16px; display: grid; gap: 12px; }
+  label { display: grid; grid-template-columns: 130px 1fr; align-items: center; gap: 10px; font-size: 14px; }
+  select, input { background: #151816; color: #eee; border: 1px solid #444; border-radius: 6px; padding: 6px; font: inherit; }
+  .go { font-size: 18px; font-weight: 700; padding: 12px; border-radius: 10px; border: 0; cursor: pointer;
+        background: linear-gradient(180deg, #ffe08a, #d39b12); color: #2a1b00; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .row button { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #555; background: #1d211f; color: #eee; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="demo">
+  <h1>🎰 Casino DnD — démo</h1>
+  <p>Aperçu des animations du module Foundry, sans Foundry. Le son est synthétisé : monte le volume.</p>
+  <div class="card">
+    <label>Pool <select id="pool"></select></label>
+    <label>Tirages <input id="count" type="number" min="1" max="10" value="1"></label>
+    <label>Mode <select id="mode"><option value="roulette">Roulette</option><option value="cards">Cartes</option></select></label>
+    <label>Chance <input id="luck" type="range" min="-3" max="5" step="1" value="0"></label>
+    <label>Pour <input id="to" value="Thorin"></label>
+    <button class="go" id="go">🎰 Lancer</button>
+    <div class="row">
+      <button data-force="common">Forcer : commun</button>
+      <button data-force="rare">rare</button>
+      <button data-force="veryRare">très rare</button>
+      <button data-force="legendary">légendaire</button>
+    </div>
+  </div>
+</div>
+<script type="module">
+  import { drawLoot, buildStrip, roll20Command, validatePool } from "../scripts/engine.js";
+  import { LootOverlay, copyText, showCopyBox } from "../scripts/overlay.js";
+
+  const POOLS = (window.CDND_POOLS ?? await (await fetch("../data/pools.json")).json()).map(validatePool);
+  const $ = (id) => document.getElementById(id);
+  for (const p of POOLS) $("pool").append(new Option(p.name, p.id));
+
+  const overlay = new LootOverlay({
+    isGM: true,
+    volume: 0.6,
+    onExport: async (items, payload) => {
+      const cmd = roll20Command(items, payload.recipient);
+      if (!(await copyText(cmd))) showCopyBox(cmd);
+      else showCopyBox(cmd, "Copié ! Colle-le dans le chat Roll20");
+    }
+  });
+  window.overlay = overlay;
+
+  function spin(forceRarity) {
+    const pool = POOLS.find((p) => p.id === $("pool").value);
+    const count = Math.max(1, Math.min(10, Number($("count").value) || 1));
+    let forced = [];
+    if (forceRarity) {
+      const idx = pool.items.findIndex((i) => i.rarity === forceRarity);
+      forced = idx >= 0 ? [idx] : [];
+    }
+    const items = drawLoot(pool, { count: forceRarity ? 1 : count, luck: Number($("luck").value), forced });
+    const results = items.map((item) => ({ item, strip: buildStrip(pool, item), winIndex: 54 }));
+    overlay.play({ title: "🎰 Le Casino", recipient: $("to").value || null, mode: $("mode").value, results, duration: 6 });
+  }
+  window.spin = spin;
+  $("go").onclick = () => spin();
+  document.querySelectorAll("[data-force]").forEach((b) => (b.onclick = () => spin(b.dataset.force)));
+</script>
+</body>
+</html>

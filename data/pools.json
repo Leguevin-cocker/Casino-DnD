@@ -1,0 +1,518 @@
+[
+  {
+    "id": "tresor-donjon",
+    "name": "Trésor de donjon",
+    "description": "Un peu de tout : pièces, potions, babioles et, avec de la chance, un objet magique.",
+    "items": [
+      {
+        "name": "{q} pièces d'or",
+        "rarity": "common",
+        "type": "treasure",
+        "quantity": "3d6*10",
+        "value": "{q} po",
+        "description": "Une bourse de cuir râpé, lourde de pièces frappées à l'effigie d'un roi oublié.",
+        "chance": 3,
+        "currency": "gp"
+      },
+      {
+        "name": "{q} pièces d'argent",
+        "rarity": "common",
+        "type": "treasure",
+        "quantity": "4d10*10",
+        "value": "{q} pa",
+        "description": "Des pièces ternies, mêlées de poussière et de quelques boutons de veste.",
+        "chance": 2,
+        "currency": "sp"
+      },
+      {
+        "name": "Potion de soins",
+        "rarity": "common",
+        "type": "potion",
+        "quantity": "1d2",
+        "weight": 0.5,
+        "value": "50 po",
+        "description": "Un liquide rouge qui scintille quand on l'agite. Boire la potion rend 2d4 + 2 points de vie.",
+        "chance": 3
+      },
+      {
+        "name": "Corde en soie (15 m)",
+        "rarity": "common",
+        "type": "gear",
+        "weight": 5,
+        "value": "10 po",
+        "description": "Légère, solide, et étonnamment propre pour un donjon."
+      },
+      {
+        "name": "Torches",
+        "rarity": "common",
+        "type": "gear",
+        "quantity": "1d4+1",
+        "weight": 1,
+        "value": "1 pc",
+        "description": "Brûlent environ une heure. Lumière vive sur 6 m."
+      },
+      {
+        "name": "Ration de voyage",
+        "rarity": "common",
+        "type": "food",
+        "quantity": "1d6",
+        "weight": 1,
+        "value": "5 pa",
+        "description": "Viande séchée, biscuits durs, fruits secs. Ça nourrit, c'est tout ce qu'on peut en dire."
+      },
+      {
+        "name": "Gemme d'agate",
+        "rarity": "common",
+        "type": "gem",
+        "quantity": "1d3",
+        "value": "10 po",
+        "description": "Une petite pierre striée de bandes brunes et blanches."
+      },
+      {
+        "name": "Dé en os gravé",
+        "rarity": "common",
+        "type": "trinket",
+        "value": "1 po",
+        "description": "Un dé à six faces taillé dans un os. Le 6 est un peu plus usé que les autres…"
+      },
+      {
+        "name": "Carte au trésor déchirée",
+        "rarity": "common",
+        "type": "trinket",
+        "description": "La moitié d'une carte. Une croix rouge, une rivière, et le mot « PAS ICI » griffonné dans un coin."
+      },
+      {
+        "name": "Dague",
+        "rarity": "common",
+        "type": "weapon",
+        "subtype": "Dague",
+        "damage": "1d4",
+        "damageType": "Piercing",
+        "properties": "Finesse, Light, Thrown",
+        "range": "6/18 m",
+        "weight": 1,
+        "value": "2 po",
+        "description": "Une lame simple, bien équilibrée."
+      },
+      {
+        "name": "Potion de soins supérieurs",
+        "rarity": "uncommon",
+        "type": "potion",
+        "weight": 0.5,
+        "value": "150 po",
+        "description": "Rouge profond, presque noir. Rend 4d4 + 4 points de vie."
+      },
+      {
+        "name": "Potion d'escalade",
+        "rarity": "uncommon",
+        "type": "potion",
+        "weight": 0.5,
+        "value": "180 po",
+        "description": "Pendant 1 heure, vitesse d'escalade égale à la vitesse de marche et avantage aux tests de Force (Athlétisme) pour grimper."
+      },
+      {
+        "name": "Parchemin de Bouclier",
+        "rarity": "uncommon",
+        "type": "scroll",
+        "value": "120 po",
+        "description": "Sort de niveau 1. En réaction, +5 à la CA jusqu'au début de votre prochain tour."
+      },
+      {
+        "name": "Sac sans fond",
+        "rarity": "uncommon",
+        "type": "wondrous",
+        "weight": 7,
+        "value": "500 po",
+        "description": "L'intérieur est bien plus grand que l'extérieur : jusqu'à 250 kg ou 1,8 m³. Le retourner fait tout tomber."
+      },
+      {
+        "name": "Lunettes de nuit",
+        "rarity": "uncommon",
+        "type": "wondrous",
+        "value": "400 po",
+        "description": "Tant que vous les portez, vous voyez dans le noir jusqu'à 18 m."
+      },
+      {
+        "name": "Cape de protection",
+        "rarity": "uncommon",
+        "type": "wondrous",
+        "attunement": true,
+        "bonus": 1,
+        "value": "500 po",
+        "description": "+1 à la CA et aux jets de sauvegarde tant que vous la portez.",
+        "r20mods": "AC +1, Saving Throws +1"
+      },
+      {
+        "name": "Épée longue +1",
+        "rarity": "uncommon",
+        "type": "weapon",
+        "subtype": "Épée longue",
+        "damage": "1d8",
+        "damageType": "Slashing",
+        "properties": "Versatile (1d10)",
+        "bonus": 1,
+        "weight": 3,
+        "value": "500 po",
+        "description": "+1 aux jets d'attaque et de dégâts. La garde est sculptée en forme d'ailes."
+      },
+      {
+        "name": "Pierre porte-bonheur",
+        "rarity": "uncommon",
+        "type": "wondrous",
+        "attunement": true,
+        "value": "450 po",
+        "description": "Une agate polie. +1 aux tests de caractéristique et jets de sauvegarde.",
+        "r20mods": "Ability Checks +1, Saving Throws +1"
+      },
+      {
+        "name": "Perle de réserve",
+        "rarity": "uncommon",
+        "type": "wondrous",
+        "attunement": "par un lanceur de sorts",
+        "value": "400 po",
+        "description": "Par une action, récupérez un emplacement de sort dépensé de niveau 3 maximum. Une fois par aube."
+      },
+      {
+        "name": "Anneau de protection",
+        "rarity": "rare",
+        "type": "ring",
+        "attunement": true,
+        "bonus": 1,
+        "value": "3 500 po",
+        "description": "+1 à la CA et aux jets de sauvegarde.",
+        "r20mods": "AC +1, Saving Throws +1"
+      },
+      {
+        "name": "Baguette des boules de feu",
+        "rarity": "rare",
+        "type": "wand",
+        "attunement": "par un lanceur de sorts",
+        "value": "4 000 po",
+        "description": "7 charges. Dépensez-en pour lancer Boule de feu (DD 15). Récupère 1d6+1 charges à l'aube. Sur un 1 au dé quand la dernière part, la baguette se consume."
+      },
+      {
+        "name": "Armure de cuir clouté +1",
+        "rarity": "rare",
+        "type": "armor",
+        "subtype": "Cuir clouté",
+        "ac": 12,
+        "bonus": 1,
+        "weight": 13,
+        "value": "1 500 po",
+        "description": "+1 à la CA. Les clous ne font aucun bruit, même en courant."
+      },
+      {
+        "name": "Bottes de rapidité",
+        "rarity": "rare",
+        "type": "wondrous",
+        "attunement": true,
+        "value": "4 000 po",
+        "description": "Claquez des talons (action bonus) : vitesse doublée et désavantage aux attaques d'opportunité contre vous pendant 10 minutes. Une fois par aube."
+      },
+      {
+        "name": "Flamme éternelle du forgeron",
+        "rarity": "rare",
+        "type": "weapon",
+        "subtype": "Marteau de guerre",
+        "damage": "1d8",
+        "damageType": "Bludgeoning",
+        "properties": "Versatile (1d10)",
+        "bonus": 1,
+        "attunement": true,
+        "weight": 2,
+        "value": "3 000 po",
+        "description": "+1 attaque/dégâts. La tête du marteau rougeoie : +1d6 dégâts de feu à chaque coup réussi."
+      },
+      {
+        "name": "Amulette de santé",
+        "rarity": "rare",
+        "type": "wondrous",
+        "attunement": true,
+        "value": "4 000 po",
+        "description": "Votre Constitution passe à 19 tant que vous la portez (sans effet si elle est déjà de 19 ou plus).",
+        "r20mods": "Constitution: 19"
+      },
+      {
+        "name": "Cape du déplacement",
+        "rarity": "veryRare",
+        "type": "wondrous",
+        "attunement": true,
+        "value": "12 000 po",
+        "description": "Votre image semble décalée : les attaques contre vous ont un désavantage. L'effet s'interrompt quand vous êtes touché, jusqu'à votre prochain tour."
+      },
+      {
+        "name": "Lame chantante d'Aubeclair",
+        "rarity": "veryRare",
+        "type": "weapon",
+        "subtype": "Épée longue",
+        "damage": "1d8",
+        "damageType": "Slashing",
+        "properties": "Versatile (1d10)",
+        "bonus": 2,
+        "attunement": true,
+        "weight": 3,
+        "value": "15 000 po",
+        "description": "+2 attaque/dégâts. Elle fredonne en combat ; ses alliés à 3 m ont +1 aux jets de sauvegarde contre la peur."
+      },
+      {
+        "name": "Manuel de vitalité",
+        "rarity": "veryRare",
+        "type": "book",
+        "weight": 5,
+        "value": "20 000 po",
+        "description": "Le lire pendant 48 heures sur 6 jours augmente la Constitution de 2 (max 24). Le livre perd ensuite sa magie pour un siècle."
+      },
+      {
+        "name": "Jeton du Croupier",
+        "rarity": "legendary",
+        "type": "wondrous",
+        "attunement": true,
+        "value": "Inestimable",
+        "description": "Un jeton de casino en or, frappé d'un dé qui roule. Une fois par jour, après avoir vu le résultat d'un d20 (le vôtre ou celui d'un autre), vous pouvez le relancer. Le Croupier, lui, se souvient de chaque jeton prêté."
+      },
+      {
+        "name": "Épée vorpale",
+        "rarity": "legendary",
+        "type": "weapon",
+        "subtype": "Épée longue",
+        "damage": "1d8",
+        "damageType": "Slashing",
+        "properties": "Versatile (1d10)",
+        "bonus": 3,
+        "attunement": true,
+        "weight": 3,
+        "value": "Inestimable",
+        "description": "+3 attaque/dégâts, ignore la résistance aux tranchants. Sur un 20 naturel, elle tranche une tête."
+      }
+    ]
+  },
+  {
+    "id": "coffre-boss",
+    "name": "Coffre du boss",
+    "description": "Pour la fin du donjon : les raretés hautes sortent beaucoup plus souvent.",
+    "rarityWeights": {
+      "common": 10,
+      "uncommon": 40,
+      "rare": 32,
+      "veryRare": 14,
+      "legendary": 4,
+      "artifact": 0
+    },
+    "items": [
+      {
+        "name": "{q} pièces d'or",
+        "rarity": "common",
+        "type": "treasure",
+        "quantity": "6d6*25",
+        "value": "{q} po",
+        "description": "Le trésor de guerre du boss, entassé à la va-vite.",
+        "currency": "gp"
+      },
+      {
+        "name": "Calice en or serti",
+        "rarity": "common",
+        "type": "treasure",
+        "value": "250 po",
+        "description": "Un calice orné de petites améthystes. Il sent encore le vin."
+      },
+      {
+        "name": "Potion de soins supérieurs",
+        "rarity": "uncommon",
+        "type": "potion",
+        "quantity": "1d3",
+        "weight": 0.5,
+        "value": "150 po",
+        "description": "Rend 4d4 + 4 points de vie."
+      },
+      {
+        "name": "Bouclier +1",
+        "rarity": "uncommon",
+        "type": "armor",
+        "subtype": "Bouclier",
+        "ac": 2,
+        "bonus": 1,
+        "weight": 6,
+        "value": "500 po",
+        "description": "+1 à la CA en plus du bonus normal du bouclier."
+      },
+      {
+        "name": "Arc long +1",
+        "rarity": "uncommon",
+        "type": "weapon",
+        "subtype": "Arc long",
+        "damage": "1d8",
+        "damageType": "Piercing",
+        "properties": "Ammunition, Heavy, Two-Handed",
+        "range": "45/180 m",
+        "bonus": 1,
+        "weight": 2,
+        "value": "500 po",
+        "description": "+1 attaque/dégâts. La corde ne se détend jamais."
+      },
+      {
+        "name": "Potion de soins excellents",
+        "rarity": "rare",
+        "type": "potion",
+        "weight": 0.5,
+        "value": "450 po",
+        "description": "Rend 8d4 + 8 points de vie."
+      },
+      {
+        "name": "Cotte de mailles +1",
+        "rarity": "rare",
+        "type": "armor",
+        "subtype": "Cotte de mailles",
+        "ac": 16,
+        "bonus": 1,
+        "weight": 55,
+        "value": "1 500 po",
+        "description": "+1 à la CA. Désavantage en Discrétion, For 13 requise."
+      },
+      {
+        "name": "Anneau de résistance (feu)",
+        "rarity": "rare",
+        "type": "ring",
+        "attunement": true,
+        "value": "4 000 po",
+        "description": "Résistance aux dégâts de feu tant que vous le portez. Un petit grenat brille au centre."
+      },
+      {
+        "name": "Hache du chef de guerre",
+        "rarity": "rare",
+        "type": "weapon",
+        "subtype": "Hache d'armes",
+        "damage": "1d8",
+        "damageType": "Slashing",
+        "properties": "Versatile (1d10)",
+        "bonus": 2,
+        "weight": 4,
+        "value": "4 500 po",
+        "description": "+2 attaque/dégâts. Quand vous tombez à 0 PV, vous pouvez rester à 1 PV à la place (une fois par aube)."
+      },
+      {
+        "name": "Armure de plates +2",
+        "rarity": "veryRare",
+        "type": "armor",
+        "subtype": "Harnois",
+        "ac": 18,
+        "bonus": 2,
+        "weight": 65,
+        "value": "18 000 po",
+        "description": "+2 à la CA. Désavantage en Discrétion, For 15 requise."
+      },
+      {
+        "name": "Bâton du givre",
+        "rarity": "veryRare",
+        "type": "staff",
+        "attunement": "par un druide, ensorceleur, sorcier ou magicien",
+        "weight": 4,
+        "value": "20 000 po",
+        "description": "Résistance au froid. 10 charges : Cône de froid (5), Mur de glace (4), Nappe de brouillard (1), Tempête de grêle (4)."
+      },
+      {
+        "name": "Couronne du Seigneur déchu",
+        "rarity": "legendary",
+        "type": "wondrous",
+        "attunement": true,
+        "value": "Inestimable",
+        "description": "Charisme 21 tant que vous la portez. Les morts-vivants de faible puissance hésitent avant de vous attaquer. La nuit, vous entendez parfois une voix qui vous appelle « Majesté »."
+      }
+    ]
+  },
+  {
+    "id": "apothicaire",
+    "name": "Échoppe de l'apothicaire",
+    "description": "Potions, parchemins et ingrédients douteux.",
+    "items": [
+      {
+        "name": "Potion de soins",
+        "rarity": "common",
+        "type": "potion",
+        "quantity": "1d3",
+        "weight": 0.5,
+        "value": "50 po",
+        "description": "Rend 2d4 + 2 points de vie.",
+        "chance": 3
+      },
+      {
+        "name": "Antidote",
+        "rarity": "common",
+        "type": "potion",
+        "weight": 0.5,
+        "value": "50 po",
+        "description": "Avantage aux jets de sauvegarde contre le poison pendant 1 heure."
+      },
+      {
+        "name": "Herbes de guérison",
+        "rarity": "common",
+        "type": "gear",
+        "quantity": "1d4",
+        "value": "5 po",
+        "description": "Un bouquet séché qui sent la menthe et la terre mouillée."
+      },
+      {
+        "name": "Parchemin de Lumière",
+        "rarity": "common",
+        "type": "scroll",
+        "value": "25 po",
+        "description": "Tour de magie. Un objet touché émet une lumière vive sur 6 m pendant 1 heure."
+      },
+      {
+        "name": "Fiole de feu grégeois",
+        "rarity": "common",
+        "type": "gear",
+        "quantity": "1d2",
+        "weight": 1,
+        "value": "50 po",
+        "description": "À lancer (6 m). 1d4 dégâts de feu au début de chaque tour de la cible, jusqu'à ce qu'elle l'éteigne."
+      },
+      {
+        "name": "Potion de respiration aquatique",
+        "rarity": "uncommon",
+        "type": "potion",
+        "weight": 0.5,
+        "value": "180 po",
+        "description": "Respirer sous l'eau pendant 1 heure. Le goût de poisson reste plus longtemps."
+      },
+      {
+        "name": "Potion de force de géant des collines",
+        "rarity": "uncommon",
+        "type": "potion",
+        "weight": 0.5,
+        "value": "300 po",
+        "description": "Force 21 pendant 1 heure."
+      },
+      {
+        "name": "Parchemin de Restauration partielle",
+        "rarity": "uncommon",
+        "type": "scroll",
+        "value": "200 po",
+        "description": "Sort de niveau 2. Met fin à une maladie ou à l'état aveuglé, assourdi, paralysé ou empoisonné."
+      },
+      {
+        "name": "Potion d'invisibilité",
+        "rarity": "veryRare",
+        "type": "potion",
+        "weight": 0.5,
+        "value": "5 000 po",
+        "description": "Invisible pendant 1 heure. L'effet cesse si vous attaquez ou lancez un sort."
+      },
+      {
+        "name": "Potion d'héroïsme",
+        "rarity": "rare",
+        "type": "potion",
+        "weight": 0.5,
+        "value": "600 po",
+        "description": "10 PV temporaires et effet de Bénédiction pendant 1 heure."
+      },
+      {
+        "name": "Élixir du dernier souffle",
+        "rarity": "legendary",
+        "type": "potion",
+        "weight": 0.5,
+        "value": "Inestimable",
+        "description": "Versé sur les lèvres d'une créature morte depuis moins d'une minute, il la ramène à 1 PV. L'apothicaire jure qu'il n'en a fabriqué que trois."
+      }
+    ]
+  }
+]
