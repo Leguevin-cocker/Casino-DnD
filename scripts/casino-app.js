@@ -32,7 +32,7 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
     window: { title: "Casino DnD", icon: "fa-solid fa-dice", resizable: true },
     position: { width: 500, height: "auto" },
     actions: {
-      tab: CasinoApp._onTab,
+      casinoTab: CasinoApp._onTab,
       createSession: CasinoApp._onCreateSession,
       endSession: CasinoApp._onEndSession,
       showBoard: CasinoApp._onShowBoard,
@@ -53,17 +53,17 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
   constructor(options = {}) {
     super(options);
     const saved = game.settings.get(MODULE_ID, "panelState") ?? {};
-    this.state = { sourceId: "builtin:tresor-donjon", count: 3, luck: 0, minRarity: "common", unique: false, ...saved, forced: "" };
+    this.casino = { sourceId: "builtin:tresor-donjon", count: 3, luck: 0, minRarity: "common", unique: false, ...saved, forced: "" };
     this.tab = getCharacters().length ? "session" : "pj";
   }
 
   _saveState() {
-    const { forced, ...rest } = this.state;
+    const { forced, ...rest } = this.casino;
     game.settings.set(MODULE_ID, "panelState", rest);
   }
 
   async _prepareContext() {
-    const s = this.state;
+    const s = this.casino;
     const sources = await listSources();
     if (!sources.some((x) => x.id === s.sourceId)) s.sourceId = sources[0]?.id;
     let pool = null, poolError = null;
@@ -139,9 +139,9 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
     let value = input.type === "checkbox" ? input.checked : input.value;
     if (name === "count") value = Math.max(1, Math.min(12, Number(value) || 1));
     if (name === "luck") value = Number(value) || 0;
-    this.state[name] = value;
+    this.casino[name] = value;
     this._saveState();
-    if (name === "sourceId") { this.state.forced = ""; this.render(); }
+    if (name === "sourceId") { this.casino.forced = ""; this.render(); }
   }
 
   /* ----------------------------- Actions ----------------------------- */
@@ -152,7 +152,7 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async _onCreateSession() {
-    const s = this.state;
+    const s = this.casino;
     try {
       await createSession({ sourceId: s.sourceId, count: s.count, luck: s.luck, minRarity: s.minRarity, unique: s.unique, forced: s.forced });
       s.forced = "";
@@ -198,7 +198,7 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const data = JSON.parse(await file.text());
         const pools = (Array.isArray(data) ? data : [data]).map(validatePool);
         for (const p of pools) await saveCustomPool(p);
-        this.state.sourceId = `custom:${pools[0].id}`;
+        this.casino.sourceId = `custom:${pools[0].id}`;
         ui.notifications.info(`Pool importé : ${pools.map((p) => p.name).join(", ")}`);
         this.render();
       } catch (e) {
@@ -210,7 +210,7 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async _onExportPool() {
     try {
-      const pool = await loadPool(this.state.sourceId);
+      const pool = await loadPool(this.casino.sourceId);
       const { id, name, description, rarityWeights, flat, items } = pool;
       const clean = { id, name, description, rarityWeights, flat: flat || undefined, items: items.map(({ uid, quantity, ...it }) => it) };
       const save = foundry.utils.saveDataToFile ?? globalThis.saveDataToFile;
@@ -221,14 +221,14 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async _onDeletePool() {
-    const id = this.state.sourceId?.replace(/^custom:/, "");
+    const id = this.casino.sourceId?.replace(/^custom:/, "");
     const ok = await foundry.applications.api.DialogV2.confirm({
       window: { title: "Supprimer le pool" },
       content: "<p>Supprimer ce pool importé ? (les pools du module et les tables ne sont pas touchés)</p>"
     });
     if (!ok) return;
     await deleteCustomPool(id);
-    this.state.sourceId = "builtin:tresor-donjon";
+    this.casino.sourceId = "builtin:tresor-donjon";
     this.render();
   }
 

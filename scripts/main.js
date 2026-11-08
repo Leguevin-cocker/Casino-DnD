@@ -21,6 +21,8 @@ let gmOpening = false;
 
 const setting = (k) => game.settings.get(MODULE_ID, k);
 const clone = (o) => foundry.utils.deepClone(o);
+/** Ce navigateur détient-il le contenu (secret) de cette session ? */
+const holdsSession = (sessionId) => game.user.isGM && setting("sessionSecret")?.id === sessionId;
 const isLeadGM = () => game.user.isGM && (game.users.activeGM ? game.users.activeGM.id === game.user.id : true);
 
 export function getCharacters() {
@@ -139,8 +141,8 @@ Hooks.once("ready", () => {
       case "play": overlay.play(msg.payload); break;
       case "close": overlay.close(); break;
       case "show-board": board.show(); break;
-      case "open-request": if (isLeadGM()) gmOpen(msg.sessionId, msg.index, msg.userId); break;
-      case "assign": if (isLeadGM()) gmAssign(msg.sessionId, msg.index, msg.to); break;
+      case "open-request": if (holdsSession(msg.sessionId)) gmOpen(msg.sessionId, msg.index, msg.userId); break;
+      case "assign": if (holdsSession(msg.sessionId)) gmAssign(msg.sessionId, msg.index, msg.to); break;
       case "denied": if (msg.userId === game.user.id) ui.notifications.warn(msg.reason); break;
     }
   });
@@ -204,7 +206,7 @@ export async function createSession(o = {}) {
   const id = foundry.utils.randomID();
   await game.settings.set(MODULE_ID, "sessionSecret", { id, items });
   await game.settings.set(MODULE_ID, "session", {
-    active: true, id, title: setting("title"), source: pool.name, createdAt: Date.now(), opening: null,
+    active: true, id, ownerId: game.user.id, title: setting("title"), source: pool.name, createdAt: Date.now(), opening: null,
     chests: items.map(() => ({ opened: false }))
   });
   board.show();
@@ -222,9 +224,10 @@ export async function endSession() {
 function requestOpen(index) {
   const st = setting("session");
   if (!st?.active) return;
-  if (isLeadGM()) return gmOpen(st.id, index, game.user.id);
-  if (!game.users.activeGM) {
-    ui.notifications.warn("Le MJ doit être connecté pour ouvrir un coffre.");
+  if (holdsSession(st.id)) return gmOpen(st.id, index, game.user.id);
+  const owner = st.ownerId ? game.users.get(st.ownerId) : game.users.activeGM;
+  if (!owner?.active) {
+    ui.notifications.warn(`${owner?.name ?? "Le MJ"} doit être connecté pour ouvrir un coffre (c'est lui qui a créé la session).`);
     return board.render(st);
   }
   game.socket.emit(SOCKET, { action: "open-request", sessionId: st.id, index, userId: game.user.id });
@@ -233,7 +236,7 @@ function requestOpen(index) {
 function requestAssign(index, to) {
   const st = setting("session");
   if (!st?.active) return;
-  if (isLeadGM()) return gmAssign(st.id, index, to);
+  if (holdsSession(st.id)) return gmAssign(st.id, index, to);
   game.socket.emit(SOCKET, { action: "assign", sessionId: st.id, index, to });
 }
 
