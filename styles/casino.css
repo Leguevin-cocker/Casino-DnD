@@ -1,0 +1,528 @@
+/* ==================================================================
+   Casino DnD — animations de loot
+   ================================================================== */
+
+.cdnd-overlay, .cdnd-reveal, .cdnd-copybox {
+  --gold: #ffcf4a;
+  --gold-deep: #b8860b;
+  --ink: #f6f0e1;
+  --muted: #b9b2a2;
+  --felt: #0d3b2a;
+  --font-title: "Modesto Condensed", "Cinzel", "Palatino Linotype", Georgia, serif;
+  --font-body: "Signika", "Segoe UI", system-ui, sans-serif;
+}
+.r-common    { --rc: #a7b0bb; --rc2: #6d747d; }
+.r-uncommon  { --rc: #3ccf6e; --rc2: #1d7a3f; }
+.r-rare      { --rc: #3d8bff; --rc2: #1c4fa6; }
+.r-veryRare  { --rc: #b25cff; --rc2: #6a24b3; }
+.r-legendary { --rc: #ffb31a; --rc2: #b86b00; }
+.r-artifact  { --rc: #ff3b3b; --rc2: #9e1010; }
+
+.cdnd-overlay {
+  position: fixed; inset: 0; z-index: 10000;
+  font-family: var(--font-body); color: var(--ink);
+  display: flex; align-items: center; justify-content: center;
+  animation: cdnd-fade-in 400ms ease-out both;
+  user-select: none;
+}
+.cdnd-overlay.cdnd-closing { animation: cdnd-fade-out 380ms ease-in both; }
+@keyframes cdnd-fade-in  { from { opacity: 0 } to { opacity: 1 } }
+@keyframes cdnd-fade-out { to { opacity: 0; transform: scale(1.02) } }
+
+.cdnd-bg { position: absolute; inset: 0; background: rgba(4, 8, 6, .88); backdrop-filter: blur(6px); overflow: hidden; }
+.cdnd-bg-felt {
+  position: absolute; inset: 0; opacity: .55;
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(26, 110, 74, .55), transparent 65%),
+    repeating-linear-gradient(45deg, rgba(255,255,255,.015) 0 2px, transparent 2px 6px);
+}
+.cdnd-bg-glow {
+  position: absolute; left: 50%; top: 45%; width: 140vmax; height: 140vmax; translate: -50% -50%;
+  background: conic-gradient(from 0deg, transparent 0 10%, rgba(255, 207, 74, .07) 12%, transparent 16% 35%,
+              rgba(255, 207, 74, .06) 38%, transparent 42% 60%, rgba(255, 207, 74, .07) 63%, transparent 67% 85%, rgba(255,207,74,.06) 88%, transparent 92%);
+  animation: cdnd-spin 40s linear infinite;
+}
+@keyframes cdnd-spin { to { rotate: 360deg } }
+
+.cdnd-fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }
+
+.cdnd-stage {
+  position: relative; z-index: 2; width: min(1100px, 96vw); max-height: 94vh;
+  display: flex; flex-direction: column; align-items: center; gap: 22px;
+}
+.cdnd-stage.cdnd-shake { animation: cdnd-shake 520ms cubic-bezier(.36,.07,.19,.97) both; }
+@keyframes cdnd-shake {
+  10%, 90% { transform: translate(calc(-2px * var(--shake, 1)), 1px) }
+  20%, 80% { transform: translate(calc(4px * var(--shake, 1)), -2px) }
+  30%, 50%, 70% { transform: translate(calc(-7px * var(--shake, 1)), 2px) }
+  40%, 60% { transform: translate(calc(7px * var(--shake, 1)), -1px) }
+}
+
+.cdnd-head { text-align: center; }
+.cdnd-title { font-family: var(--font-title); font-size: clamp(34px, 5vw, 58px); letter-spacing: .04em; line-height: 1.05; display: flex; align-items: center; justify-content: center; gap: 14px; }
+.cdnd-title-emoji { font-size: .8em; filter: drop-shadow(0 0 14px rgba(255, 190, 40, .5)); }
+.cdnd-title-txt {
+  background: linear-gradient(180deg, #fff6d0 0%, var(--gold) 45%, var(--gold-deep) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 3px 0 rgba(0,0,0,.6)) drop-shadow(0 0 18px rgba(255, 190, 40, .35));
+}
+.cdnd-intro .cdnd-title { animation: cdnd-drop 700ms cubic-bezier(.2,1.6,.4,1) both; }
+@keyframes cdnd-drop { from { transform: translateY(-60px) scale(.7); opacity: 0 } to { transform: none; opacity: 1 } }
+.cdnd-sub { margin-top: 6px; font-size: 17px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+
+.cdnd-content { width: 100%; display: flex; justify-content: center; min-height: 200px; }
+.cdnd-foot { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+.cdnd-btn {
+  font-family: var(--font-body); font-size: 15px; font-weight: 600; cursor: pointer;
+  padding: 9px 18px; border-radius: 999px; color: var(--ink); width: auto; line-height: 1.2;
+  background: linear-gradient(180deg, #2b3d35, #17231e); border: 1px solid rgba(255, 207, 74, .45);
+  box-shadow: 0 2px 0 rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08);
+  transition: transform .12s, filter .12s;
+}
+.cdnd-btn:hover { filter: brightness(1.25); transform: translateY(-1px); }
+.cdnd-btn.cdnd-gold { background: linear-gradient(180deg, #ffe08a, #d39b12); color: #2a1b00; border-color: #fff0b8; }
+.cdnd-btn.cdnd-ghost { background: transparent; border-color: rgba(255,255,255,.2); }
+.cdnd-btn.cdnd-small { font-size: 12px; padding: 5px 11px; }
+
+/* ----------------------------- Roulette ----------------------------- */
+.cdnd-reel {
+  position: relative; width: 100%; height: 190px; overflow: hidden; border-radius: 16px;
+  background: linear-gradient(180deg, #0a1a13, #0f2a1e 50%, #0a1a13);
+  border: 2px solid rgba(255, 207, 74, .55);
+  box-shadow: 0 0 0 6px rgba(0,0,0,.35), 0 0 40px rgba(255, 190, 40, .15), inset 0 0 30px rgba(0,0,0,.8);
+}
+.cdnd-track { position: absolute; top: 18px; left: 0; display: flex; gap: 10px; padding-left: 10px; will-change: transform; }
+.cdnd-reel-shade {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, rgba(4,10,7,.95) 0%, transparent 22%, transparent 78%, rgba(4,10,7,.95) 100%);
+}
+.cdnd-needle {
+  --nc: var(--gold);
+  position: absolute; left: 50%; top: 0; bottom: 0; width: 4px; translate: -50% 0; z-index: 2;
+  background: var(--nc); box-shadow: 0 0 12px var(--nc), 0 0 30px var(--nc);
+  transition: background .08s, box-shadow .08s;
+}
+.cdnd-needle::before, .cdnd-needle::after {
+  content: ""; position: absolute; left: 50%; translate: -50% 0;
+  border-left: 12px solid transparent; border-right: 12px solid transparent;
+}
+.cdnd-needle::before { top: 0; border-top: 16px solid var(--nc); }
+.cdnd-needle::after { bottom: 0; border-bottom: 16px solid var(--nc); }
+
+.cdnd-mini {
+  flex: 0 0 136px; height: 152px; border-radius: 10px; position: relative; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 10px 8px 16px;
+  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--rc) 35%, #1a2420), #121a17 75%);
+  border: 1px solid color-mix(in srgb, var(--rc) 55%, transparent);
+  transition: opacity .4s, transform .4s, filter .4s;
+}
+.cdnd-mini::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 7px; background: var(--rc); box-shadow: 0 0 14px var(--rc); }
+.cdnd-mini .cdnd-icon { font-size: 50px; line-height: 1; height: 62px; display: flex; align-items: center; filter: drop-shadow(0 4px 6px rgba(0,0,0,.6)); }
+.cdnd-icon img, .cdnd-card-icon img, .cdnd-loot-icon img { width: 100%; height: 100%; object-fit: contain; border: 0; }
+.cdnd-mini .cdnd-icon:has(img) { width: 62px; }
+.cdnd-mini-name { font-size: 13px; text-align: center; line-height: 1.15; max-height: 2.4em; overflow: hidden; color: #eae4d4; }
+.cdnd-reel.is-landed .cdnd-mini:not(.is-win) { opacity: .25; filter: grayscale(.7); }
+.cdnd-mini.is-win { transform: scale(1.08); box-shadow: 0 0 0 2px var(--rc), 0 0 40px var(--rc); z-index: 1; animation: cdnd-pulse 1s ease-in-out infinite alternate; }
+@keyframes cdnd-pulse { to { box-shadow: 0 0 0 3px var(--rc), 0 0 70px var(--rc); } }
+
+/* ----------------------------- Coffres ----------------------------- */
+.cdnd-chest-scene { display: flex; flex-direction: column; align-items: center; gap: 14px; padding-top: 150px; }
+.cdnd-chest {
+  --mc: #c08a4a; --next: #fff; --charge: 1;
+  position: relative; width: 300px; height: 300px; perspective: 900px; transition: filter .3s;
+}
+.cdnd-chest-dropper { transform: translateY(-120vh); }
+.cdnd-chest-dropper.is-dropped { animation: cdnd-chest-drop .75s cubic-bezier(.55,0,.75,.2) forwards; }
+@keyframes cdnd-chest-drop {
+  0%   { transform: translateY(-120vh) rotate(-6deg); }
+  55%  { transform: translateY(0) scale(1.08, .88); }
+  70%  { transform: translateY(-26px) scale(.97, 1.04) rotate(1.5deg); }
+  85%  { transform: translateY(0) scale(1.02, .97); }
+  100% { transform: none; }
+}
+.cdnd-chest-base, .cdnd-chest-lid { position: absolute; left: 0; width: 300px; }
+.cdnd-chest-base { top: 120px; height: 180px; z-index: 2; }
+.cdnd-chest-lid { top: 0; height: 120px; z-index: 3; transform-origin: 50% 100%; transform-style: preserve-3d;
+  transition: transform .75s cubic-bezier(.25,1.45,.45,1); }
+.cdnd-lid-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.cdnd-lid-back { transform: rotateX(180deg); }
+.cdnd-chest-svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 6px 6px rgba(0,0,0,.45)); }
+.cdnd-chest[data-mat="gem"] .cdnd-chest-svg { animation: cdnd-gem-hue 4s linear infinite; }
+@keyframes cdnd-gem-hue { 0% { filter: drop-shadow(0 0 10px #c58bff) hue-rotate(0deg) } 50% { filter: drop-shadow(0 0 22px #5ff9ff) hue-rotate(40deg) } 100% { filter: drop-shadow(0 0 10px #c58bff) hue-rotate(0deg) } }
+.cdnd-chest[data-mat="gold"] .cdnd-chest-svg { filter: drop-shadow(0 0 14px rgba(255, 200, 60, .7)) drop-shadow(0 6px 6px rgba(0,0,0,.45)); }
+.cdnd-chest[data-mat="silver"] .cdnd-chest-svg { filter: drop-shadow(0 0 10px rgba(220, 235, 255, .55)) drop-shadow(0 6px 6px rgba(0,0,0,.45)); }
+
+.cdnd-chest-aura {
+  position: absolute; left: 50%; top: 58%; width: 520px; height: 520px; translate: -50% -50%; border-radius: 50%; z-index: 0;
+  background: radial-gradient(circle, color-mix(in srgb, var(--mc) 55%, transparent), transparent 62%);
+  opacity: .55; transition: background .4s, opacity .4s;
+}
+.cdnd-chest[data-mat="wood"] .cdnd-chest-aura { opacity: .25; }
+.cdnd-chest[data-mat="gem"] .cdnd-chest-aura { opacity: .9; animation: cdnd-breathe 1.6s ease-in-out infinite alternate; }
+
+.cdnd-chest-label {
+  font-family: var(--font-title); font-size: 30px; letter-spacing: .05em; color: var(--mc, #c08a4a);
+  text-shadow: 0 0 16px color-mix(in srgb, var(--mc, #c08a4a) 70%, transparent), 0 2px 0 rgba(0,0,0,.7);
+}
+.cdnd-chest.is-pop + .cdnd-chest-label, .cdnd-chest-scene:has(.is-pop) .cdnd-chest-label { animation: cdnd-label-pop .5s cubic-bezier(.2,1.8,.4,1); }
+@keyframes cdnd-label-pop { from { transform: scale(1.5); opacity: .2 } }
+
+/* charge avant amélioration : tremblement qui s'intensifie + lueur du matériau suivant */
+.cdnd-chest.is-charging { animation: cdnd-chest-charge .09s linear infinite; filter: drop-shadow(0 0 calc(8px * var(--charge)) var(--next)) brightness(1.15); }
+@keyframes cdnd-chest-charge {
+  0% { transform: translate(calc(-1px * var(--charge)), 0) rotate(-.6deg) }
+  50% { transform: translate(calc(1.5px * var(--charge)), -2px) rotate(.6deg) }
+  100% { transform: translate(calc(-1px * var(--charge)), 1px) rotate(0) }
+}
+.cdnd-chest.is-pop { animation: cdnd-chest-pop .55s cubic-bezier(.2,1.8,.4,1); }
+@keyframes cdnd-chest-pop { 0% { transform: scale(1.22) } 100% { transform: none } }
+.cdnd-chest.is-fizzle { filter: grayscale(.6) brightness(.75); animation: cdnd-chest-sag .6s ease-out; }
+@keyframes cdnd-chest-sag { 30% { transform: scale(.94, 1.03) } 100% { transform: none } }
+.cdnd-chest.is-rattle { animation: cdnd-chest-rattle .12s linear 4; }
+@keyframes cdnd-chest-rattle { 0%,100% { transform: rotate(0) } 25% { transform: rotate(-2.5deg) translateY(-3px) } 75% { transform: rotate(2.5deg) translateY(-3px) } }
+
+/* ouverture */
+.cdnd-chest.is-open .cdnd-chest-lid { transform: rotateX(-118deg); }
+.cdnd-chest-light {
+  position: absolute; left: 50%; bottom: 150px; width: 250px; height: 560px; translate: -50% 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(0deg, var(--rc-open, #fff) 0%, color-mix(in srgb, var(--rc-open, #fff) 50%, transparent) 30%, transparent 90%);
+  clip-path: polygon(22% 100%, 78% 100%, 100% 0, 0 0);
+  filter: blur(6px); opacity: 0; transform: scaleY(.2); transform-origin: 50% 100%;
+  transition: opacity .4s .15s, transform .7s cubic-bezier(.2,1.4,.4,1) .15s;
+}
+.cdnd-chest.is-open .cdnd-chest-light { opacity: .85; transform: none; animation: cdnd-beam 1.2s ease-in-out .8s infinite alternate; }
+@keyframes cdnd-beam { to { opacity: .55 } }
+.cdnd-chest-prize {
+  position: absolute; left: 50%; top: 120px; width: 110px; height: 110px; translate: -50% 0; z-index: 1;
+  font-size: 84px; display: flex; align-items: center; justify-content: center; opacity: 0;
+  transition: transform .9s cubic-bezier(.2,1.5,.4,1) .25s, opacity .3s .25s;
+  filter: drop-shadow(0 0 18px var(--rc-open, #fff)) drop-shadow(0 6px 10px rgba(0,0,0,.6));
+}
+.cdnd-chest.is-open .cdnd-chest-prize { opacity: 1; transform: translateY(-190px) scale(1.35); z-index: 4; animation: cdnd-float 1.6s ease-in-out 1.1s infinite alternate; }
+@keyframes cdnd-float { to { translate: -50% -10px } }
+
+/* ----------------------------- Révélation ----------------------------- */
+.cdnd-reveal {
+  position: fixed; inset: 0; z-index: 10001; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--rc) 22%, transparent), rgba(0,0,0,.65) 60%);
+  opacity: 0; transition: opacity .35s; cursor: pointer;
+  font-family: var(--font-body); color: var(--ink);
+}
+.cdnd-reveal.is-in { opacity: 1; }
+.cdnd-reveal.is-out { opacity: 0; }
+.cdnd-halo {
+  position: absolute; width: 520px; height: 520px; border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--rc) 55%, transparent), transparent 65%);
+  filter: blur(10px); animation: cdnd-breathe 2.2s ease-in-out infinite alternate;
+}
+@keyframes cdnd-breathe { from { scale: .85; opacity: .7 } to { scale: 1.1; opacity: 1 } }
+.cdnd-rays {
+  position: absolute; width: 160vmax; height: 160vmax;
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--rc) 30%, transparent) 0 6deg, transparent 6deg 18deg);
+  mask: radial-gradient(circle, #000 0 15%, transparent 55%);
+  -webkit-mask: radial-gradient(circle, #000 0 15%, transparent 55%);
+  animation: cdnd-spin 14s linear infinite;
+}
+.cdnd-hint { position: absolute; bottom: 6vh; color: var(--muted); font-size: 13px; letter-spacing: .1em; opacity: .7; }
+
+.cdnd-card3d { width: 340px; height: 480px; perspective: 1400px; position: relative; }
+.cdnd-reveal .cdnd-card3d { transform: scale(.4) translateY(80px); opacity: 0; transition: transform .6s cubic-bezier(.2,1.4,.4,1), opacity .3s; }
+.cdnd-reveal.is-in .cdnd-card3d { transform: none; opacity: 1; }
+.cdnd-card-inner { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .8s cubic-bezier(.3,1.25,.4,1); }
+.cdnd-card3d.is-flipped .cdnd-card-inner { transform: rotateY(180deg); }
+.cdnd-face { position: absolute; inset: 0; border-radius: 18px; backface-visibility: hidden; -webkit-backface-visibility: hidden; overflow: hidden; }
+.cdnd-back {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 207, 74, .25), transparent 60%),
+    repeating-linear-gradient(45deg, #5a0f17 0 10px, #43080f 10px 20px);
+  border: 3px solid var(--gold); box-shadow: 0 20px 60px rgba(0,0,0,.6), inset 0 0 0 8px rgba(0,0,0,.25), inset 0 0 0 10px rgba(255,207,74,.4);
+  display: flex; align-items: center; justify-content: center;
+}
+.cdnd-back-art { width: 55%; aspect-ratio: 1; border-radius: 50%; border: 3px solid var(--gold); display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.3); font-size: 70px; }
+.cdnd-front {
+  transform: rotateY(180deg);
+  background:
+    radial-gradient(circle at 50% 22%, color-mix(in srgb, var(--rc) 45%, transparent), transparent 55%),
+    linear-gradient(180deg, #1d2621, #101512);
+  border: 3px solid var(--rc);
+  box-shadow: 0 0 50px color-mix(in srgb, var(--rc) 70%, transparent), 0 20px 60px rgba(0,0,0,.7);
+  display: flex; flex-direction: column; align-items: center; padding: 22px 24px 18px; gap: 8px; text-align: center;
+}
+.cdnd-front::before { /* reflet holographique */
+  content: ""; position: absolute; inset: -50%; pointer-events: none;
+  background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,.18) 50%, transparent 60%);
+  animation: cdnd-sheen 3.2s ease-in-out infinite;
+}
+@keyframes cdnd-sheen { from { translate: -40% 0 } to { translate: 40% 0 } }
+.cdnd-card-rarity {
+  font-size: 12px; font-weight: 700; letter-spacing: .25em; text-transform: uppercase; padding: 4px 12px; border-radius: 999px;
+  background: var(--rc); color: #101010; box-shadow: 0 0 16px var(--rc);
+}
+.cdnd-card-icon { font-size: 92px; height: 120px; width: 120px; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 8px 14px rgba(0,0,0,.7)); }
+.cdnd-card-name { font-family: var(--font-title); font-size: 30px; line-height: 1.05; color: #fff; text-shadow: 0 0 18px color-mix(in srgb, var(--rc) 80%, transparent); }
+.cdnd-card-type { font-size: 13px; color: var(--muted); font-style: italic; }
+.cdnd-card-stats { font-size: 13px; color: #e8dfc4; background: rgba(0,0,0,.3); padding: 4px 10px; border-radius: 8px; white-space: pre-wrap; }
+.cdnd-card-desc { font-size: 14px; line-height: 1.4; color: #ddd6c4; overflow-y: auto; flex: 1; white-space: pre-line; padding: 0 2px; scrollbar-width: thin; }
+.cdnd-card-meta { font-size: 13px; color: var(--gold); white-space: pre; border-top: 1px solid rgba(255,255,255,.1); padding-top: 8px; width: 100%; }
+
+.r-legendary .cdnd-card-name, .r-artifact .cdnd-card-name {
+  background: linear-gradient(90deg, #fff, var(--rc), #fff, var(--rc), #fff); background-size: 300% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent; animation: cdnd-shine 3s linear infinite;
+}
+@keyframes cdnd-shine { to { background-position: 300% 0 } }
+
+.cdnd-flash { position: fixed; inset: 0; z-index: 10002; pointer-events: none; background: radial-gradient(circle, #fff, var(--fc) 40%, transparent 75%); animation: cdnd-flash 850ms ease-out forwards; }
+@keyframes cdnd-flash { 0% { opacity: .95 } 100% { opacity: 0 } }
+
+/* ----------------------------- Cartes ----------------------------- */
+.cdnd-hand { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; perspective: 1400px; padding: 10px; }
+.cdnd-card3d.is-small { width: 170px; height: 240px; }
+.cdnd-card3d.is-small .cdnd-front { padding: 14px 10px; gap: 6px; justify-content: center; }
+.cdnd-card3d.is-small .cdnd-card-icon { font-size: 56px; width: 76px; height: 76px; }
+.cdnd-card3d.is-small .cdnd-card-name { font-size: 20px; }
+.cdnd-card3d.is-small .cdnd-card-rarity { font-size: 10px; letter-spacing: .15em; }
+.cdnd-card3d.is-small .cdnd-card-type { font-size: 11px; }
+.cdnd-card3d.is-small .cdnd-back-art { font-size: 40px; }
+.cdnd-hand .cdnd-card3d { transform: translateY(-110vh) rotate(-25deg); transition: transform .7s cubic-bezier(.2,1.2,.4,1); transition-delay: calc(var(--i) * 140ms); }
+.cdnd-hand.is-dealt .cdnd-card3d { transform: none; }
+.cdnd-card3d.is-tease { animation: cdnd-tease .18s ease-in-out infinite alternate; }
+.cdnd-card3d.is-tease .cdnd-back { box-shadow: 0 0 calc(60px * var(--tease)) calc(12px * var(--tease)) var(--rc), inset 0 0 0 10px rgba(255,207,74,.4); transition: box-shadow .5s; }
+@keyframes cdnd-tease { from { transform: rotate(-1.5deg) translateY(-4px) } to { transform: rotate(1.5deg) translateY(-8px) } }
+.cdnd-hand .cdnd-card3d.is-flipped { transform: translateY(-6px) scale(1.04); transition-delay: 0s; }
+
+/* ----------------------------- Récap ----------------------------- */
+.cdnd-summary { width: min(720px, 100%); display: flex; flex-direction: column; gap: 14px; }
+.cdnd-summary-title { text-align: center; font-family: var(--font-title); font-size: 30px; color: var(--gold); }
+.cdnd-loot-list { display: flex; flex-direction: column; gap: 8px; max-height: 58vh; overflow-y: auto; padding: 4px; scrollbar-width: thin; }
+.cdnd-loot {
+  display: flex; align-items: flex-start; gap: 14px; padding: 10px 14px; border-radius: 12px; cursor: pointer;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--rc) 22%, #141c18), #121815 70%);
+  border: 1px solid color-mix(in srgb, var(--rc) 50%, transparent); border-left: 5px solid var(--rc);
+  animation: cdnd-row-in .45s cubic-bezier(.2,1.3,.4,1) both; animation-delay: calc(var(--i) * 90ms);
+}
+@keyframes cdnd-row-in { from { opacity: 0; transform: translateX(-30px) } }
+.cdnd-loot-icon { font-size: 34px; width: 44px; height: 44px; flex: 0 0 44px; display: flex; align-items: center; justify-content: center; }
+.cdnd-loot-txt { flex: 1; min-width: 0; }
+.cdnd-loot-name { font-size: 18px; font-weight: 700; color: #fff; }
+.cdnd-loot-type { font-size: 12px; color: var(--rc); letter-spacing: .03em; }
+.cdnd-loot-desc { display: none; margin-top: 8px; font-size: 13.5px; line-height: 1.4; color: #d9d2c0; white-space: pre-line; }
+.cdnd-loot.is-open .cdnd-loot-desc { display: block; }
+.cdnd-loot-stats { color: #efe5c6; margin-bottom: 4px; }
+.cdnd-loot-meta { color: var(--gold); margin-top: 4px; }
+
+/* ----------------------------- Copie de secours ----------------------------- */
+.cdnd-copybox { position: fixed; inset: 0; z-index: 10010; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; font-family: var(--font-body); }
+.cdnd-copybox-inner { width: min(620px, 92vw); background: #141c18; border: 1px solid var(--gold); border-radius: 14px; padding: 18px; color: var(--ink); box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+.cdnd-copybox-title { font-family: var(--font-title); font-size: 24px; color: var(--gold); }
+.cdnd-copybox textarea { width: 100%; height: 140px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; background: #0a0f0c; color: #cfe; border: 1px solid #344; border-radius: 8px; padding: 8px; resize: vertical; word-break: break-all; }
+.cdnd-copybox-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cdnd-bg-glow, .cdnd-rays, .cdnd-front::before { animation: none; }
+}
+
+/* ----------------------------- Panneau MJ (Foundry) ----------------------------- */
+.casino-dnd-app .window-content { padding: 0; }
+.cdnd-panel { display: flex; flex-direction: column; gap: 0; }
+.cdnd-tabs { display: flex; border-bottom: 1px solid var(--color-border-light-tertiary, #7a7971); }
+.cdnd-tabs button { flex: 1; border: 0; border-radius: 0; background: transparent; padding: 8px; font-weight: 600; opacity: .65; }
+.cdnd-tabs button.active { opacity: 1; box-shadow: inset 0 -3px 0 #d39b12; }
+.cdnd-panel section { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.cdnd-panel .cdnd-row { display: flex; align-items: center; gap: 10px; }
+.cdnd-panel .cdnd-row > label { flex: 0 0 130px; font-weight: 600; }
+.cdnd-panel .cdnd-row > :not(label) { flex: 1; }
+.cdnd-panel .cdnd-hint-txt { font-size: 12px; opacity: .75; margin: -4px 0 0 140px; }
+.cdnd-panel .cdnd-luck-val { flex: 0 0 34px !important; text-align: center; font-weight: 700; }
+.cdnd-panel .cdnd-spin {
+  font-size: 18px; font-weight: 700; padding: 10px; margin-top: 4px; border-radius: 10px;
+  background: linear-gradient(180deg, #ffe08a, #d39b12); color: #2a1b00; border: 1px solid #8a6200;
+}
+.cdnd-panel .cdnd-spin:hover { filter: brightness(1.08); }
+.cdnd-panel .cdnd-tools { display: flex; gap: 6px; flex-wrap: wrap; }
+.cdnd-panel .cdnd-tools button { flex: 1; font-size: 12px; white-space: nowrap; }
+.cdnd-panel .cdnd-poolinfo { font-size: 12px; opacity: .8; font-style: italic; }
+.cdnd-history { max-height: 460px; overflow-y: auto; }
+.cdnd-history .cdnd-h-entry { border: 1px solid var(--color-border-light-tertiary, #999); border-radius: 8px; padding: 8px; margin-bottom: 8px; }
+.cdnd-history .cdnd-h-head { display: flex; justify-content: space-between; font-size: 12px; opacity: .8; margin-bottom: 4px; }
+.cdnd-history .cdnd-h-item { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+.cdnd-history .cdnd-h-item .cdnd-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--rc); flex: 0 0 10px; }
+.cdnd-history .cdnd-h-item span.name { flex: 1; }
+.cdnd-history .cdnd-h-item button, .cdnd-history .cdnd-h-actions button { flex: 0 0 auto; width: auto; font-size: 11px; padding: 1px 8px; line-height: 18px; }
+.cdnd-history .cdnd-h-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: 6px; }
+.cdnd-empty { text-align: center; opacity: .6; padding: 30px 0; }
+.cdnd-panel .cdnd-to { font-size: 11px; opacity: .75; white-space: nowrap; }
+.cdnd-panel .cdnd-session-live { display: flex; flex-direction: column; gap: 6px; }
+.cdnd-panel .cdnd-session-title { font-weight: 700; font-size: 15px; }
+.cdnd-panel .cdnd-warn-txt { font-size: 12px; background: rgba(211, 155, 18, .15); border-left: 3px solid #d39b12; padding: 6px 8px; margin: 0; }
+.cdnd-panel .cdnd-pj-list { display: flex; flex-direction: column; gap: 4px; }
+.cdnd-panel .cdnd-pj { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; border: 1px solid var(--color-border-light-tertiary, #999); border-radius: 6px; }
+.cdnd-panel .cdnd-pj button { flex: 0 0 auto; width: 28px; padding: 0; }
+.cdnd-panel .cdnd-add { flex: 0 0 auto !important; width: auto; white-space: nowrap; }
+
+/* ==================================================================
+   Tableau de session (coffres proposés, visible par tous)
+   ================================================================== */
+.cdnd-board {
+  --gold: #ffcf4a; --gold-deep: #b8860b; --ink: #f6f0e1; --muted: #b9b2a2;
+  --font-title: "Modesto Condensed", "Cinzel", "Palatino Linotype", Georgia, serif;
+  --font-body: "Signika", "Segoe UI", system-ui, sans-serif;
+  position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-body); color: var(--ink);
+  animation: cdnd-fade-in .35s ease-out both;
+}
+.cdnd-board-bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 40%, rgba(16, 60, 42, .88), rgba(3, 8, 6, .93) 70%); backdrop-filter: blur(4px); }
+.cdnd-board-panel {
+  position: relative; width: min(1180px, 96vw); max-height: 92vh; overflow-y: auto; scrollbar-width: thin;
+  display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 22px 26px;
+  border-radius: 18px; border: 2px solid rgba(255, 207, 74, .5);
+  background: linear-gradient(180deg, rgba(20, 44, 32, .92), rgba(10, 22, 16, .95)),
+              repeating-linear-gradient(45deg, rgba(255,255,255,.02) 0 2px, transparent 2px 6px);
+  box-shadow: 0 0 0 6px rgba(0,0,0,.35), 0 0 60px rgba(255, 190, 40, .15), 0 30px 80px rgba(0,0,0,.6);
+}
+.cdnd-board-head { text-align: center; width: 100%; position: relative; }
+.cdnd-board-title { font-family: var(--font-title); font-size: clamp(28px, 3.6vw, 46px); line-height: 1.05; display: flex; align-items: center; justify-content: center; gap: 12px; }
+.cdnd-board-sub { color: var(--muted); font-size: 14px; letter-spacing: .08em; text-transform: uppercase; margin-top: 4px; }
+.cdnd-board-min { position: absolute; right: 0; top: 0; width: 34px; height: 34px; border-radius: 50%; background: rgba(0,0,0,.35); color: var(--ink); border: 1px solid rgba(255,255,255,.2); cursor: pointer; font-weight: 700; line-height: 1; padding: 0; }
+.cdnd-board-hint { font-size: 16px; color: var(--gold); text-shadow: 0 0 10px rgba(255, 190, 40, .4); }
+.cdnd-board-grid { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(150px, 1fr)); gap: 18px; width: 100%; padding: 8px 0 4px; }
+@media (max-width: 900px) { .cdnd-board-grid { grid-template-columns: repeat(2, 1fr); } }
+.cdnd-board-foot { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; padding-top: 6px; }
+
+.cdnd-board-pill { display: none; }
+.cdnd-board.is-min { inset: auto 18px 18px auto; }
+.cdnd-board.is-min > :not(.cdnd-board-pill) { display: none; }
+.cdnd-board.is-min .cdnd-board-pill {
+  display: block; font: 600 15px var(--font-body); padding: 10px 18px; border-radius: 999px; cursor: pointer; color: #2a1b00;
+  background: linear-gradient(180deg, #ffe08a, #d39b12); border: 1px solid #fff0b8; box-shadow: 0 4px 18px rgba(0,0,0,.5), 0 0 20px rgba(255,190,40,.4);
+  animation: cdnd-pulse-pill 2s ease-in-out infinite;
+}
+@keyframes cdnd-pulse-pill { 50% { box-shadow: 0 4px 18px rgba(0,0,0,.5), 0 0 34px rgba(255,190,40,.8); } }
+
+.cdnd-slot {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 10px 14px; border-radius: 14px;
+  background: rgba(0,0,0,.25); border: 1px solid rgba(255,255,255,.08); min-width: 0;
+  animation: cdnd-row-in .5s cubic-bezier(.2,1.3,.4,1) both;
+}
+.cdnd-slot-chest { position: relative; width: 150px; height: 150px; margin-top: 4px; }
+.cdnd-slot-lid { position: absolute; left: 0; top: 0; width: 150px; height: 60px; z-index: 2; }
+.cdnd-slot-base { position: absolute; left: 0; top: 60px; width: 150px; height: 90px; z-index: 1; }
+.cdnd-slot-chest { perspective: 520px; }
+.cdnd-slot-lid { transform-style: preserve-3d; transform-origin: 50% 100%; }
+.cdnd-slot-chest.is-open .cdnd-slot-lid { transform: rotateX(-118deg); z-index: 0; }
+body.cdnd-playing .cdnd-board { visibility: hidden; }
+.cdnd-slot-chest[data-mat="gem"] .cdnd-chest-svg { animation: cdnd-gem-hue 4s linear infinite; }
+.cdnd-slot-num { font-family: var(--font-title); font-size: 20px; color: #e8d9b5; }
+
+.cdnd-slot.is-closed { cursor: pointer; transition: transform .2s, box-shadow .2s, background .2s; }
+.cdnd-slot.is-closed:hover { transform: translateY(-6px); background: rgba(255, 207, 74, .08); box-shadow: 0 0 0 2px rgba(255, 207, 74, .6), 0 0 30px rgba(255, 190, 40, .35); }
+.cdnd-slot.is-closed:hover .cdnd-slot-chest { animation: cdnd-chest-rattle .12s linear 2; }
+.cdnd-slot.is-locked { cursor: not-allowed; opacity: .45; filter: grayscale(.4); }
+.cdnd-slot.is-locked:hover { transform: none; box-shadow: none; background: rgba(0,0,0,.25); }
+.cdnd-slot.is-opening { opacity: 1; filter: none; box-shadow: 0 0 0 2px var(--gold), 0 0 40px rgba(255, 190, 40, .6); }
+.cdnd-slot.is-clicked { pointer-events: none; opacity: .7; }
+
+.cdnd-slot.is-open { background: linear-gradient(180deg, color-mix(in srgb, var(--rc) 22%, rgba(0,0,0,.3)), rgba(0,0,0,.3)); border-color: color-mix(in srgb, var(--rc) 60%, transparent); }
+.cdnd-slot-prize {
+  position: absolute; left: 50%; top: 18px; translate: -50% 0; z-index: 3; width: 64px; height: 64px; font-size: 52px;
+  display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 0 14px var(--rc)) drop-shadow(0 4px 6px rgba(0,0,0,.6));
+  animation: cdnd-slot-float 2.4s ease-in-out infinite alternate;
+}
+.cdnd-slot-prize img { width: 100%; height: 100%; object-fit: contain; border: 0; }
+@keyframes cdnd-slot-float { to { transform: translateY(-8px); } }
+.cdnd-slot-name { font-weight: 700; font-size: 16px; text-align: center; line-height: 1.2; color: #fff; cursor: help; }
+.cdnd-slot-rarity { font-size: 11.5px; color: var(--rc); text-align: center; }
+.cdnd-slot-by { font-size: 11px; color: var(--muted); }
+.cdnd-slot-select {
+  width: 100%; margin-top: 4px; padding: 5px 8px; border-radius: 8px; font: 14px var(--font-body);
+  background: #0c1511; color: var(--ink); border: 1px solid color-mix(in srgb, var(--rc) 60%, #444);
+}
+.cdnd-slot-code { display: flex; gap: 6px; width: 100%; }
+.cdnd-slot-code input {
+  flex: 1; min-width: 0; font: 11px ui-monospace, Consolas, monospace; padding: 4px 6px; border-radius: 6px;
+  background: #060a08; color: #9fe8c2; border: 1px solid #2b3d35; height: auto;
+}
+.cdnd-slot-code .cdnd-btn { flex: 0 0 auto; }
+.cdnd-slot-warn { font-size: 10.5px; color: #e6b450; text-align: center; }
+
+/* ==================================================================
+   Scène de théâtre, rideau et présentateur
+   ================================================================== */
+.cdnd-stageframe { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.cdnd-stageframe > div, .cdnd-curtain { background-size: 100% 100%; background-repeat: no-repeat; image-rendering: pixelated; }
+.cdnd-valance { position: absolute; top: 0; left: 0; right: 0; height: 12vh; filter: drop-shadow(0 6px 10px rgba(0,0,0,.6)); }
+.cdnd-drape { position: absolute; top: 0; bottom: 0; width: 15vw; filter: drop-shadow(0 0 18px rgba(0,0,0,.7)); }
+.cdnd-drape.cdnd-left { left: 0; }
+.cdnd-drape.cdnd-right { right: 0; transform: scaleX(-1); }
+.cdnd-floor { position: absolute; left: 0; right: 0; bottom: 0; height: 17vh; opacity: .95; }
+.cdnd-spot {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 26% 75% at 50% 0%, rgba(255, 240, 200, .16), transparent 72%),
+              radial-gradient(ellipse 22% 8% at 50% 84%, rgba(255, 230, 170, .22), transparent 70%) !important;
+}
+
+.cdnd-curtain {
+  position: absolute; inset: 0; z-index: 4; transform: translateY(-103%);
+  transition: transform .62s cubic-bezier(.55,0,.55,1.18);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,.8);
+}
+.cdnd-curtain.is-down { transform: none; }
+.cdnd-curtain:not(.is-down) { transition: transform .85s cubic-bezier(.6,0,.85,.45); }
+.cdnd-curtain-title {
+  font-family: var(--font-title); font-size: clamp(34px, 5.4vw, 76px); text-align: center; max-width: 70vw; line-height: 1.05;
+  background: linear-gradient(180deg, #fff6d0 0%, #ffcf4a 45%, #b8860b 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 4px 0 rgba(40,0,0,.85)) drop-shadow(0 0 22px rgba(255, 190, 40, .45));
+  opacity: 0; transform: scale(.9); transition: opacity .4s .35s, transform .5s .35s;
+}
+.cdnd-curtain.is-down .cdnd-curtain-title { opacity: 1; transform: none; }
+
+/* le présentateur */
+.cdnd-presenter {
+  position: absolute; left: 1.5vw; bottom: 0; z-index: 5; height: 44vh; aspect-ratio: 701 / 886;
+  transform: translateX(-130%) rotate(-8deg); transition: transform .7s cubic-bezier(.2,1.4,.4,1);
+  pointer-events: none;
+}
+.cdnd-presenter.is-in { transform: none; }
+.cdnd-presenter img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 10px 18px rgba(0,0,0,.6)); transform-origin: 50% 100%; }
+.cdnd-presenter.m-talk.is-saying img { animation: cdnd-host-talk .5s ease-in-out 3; }
+.cdnd-presenter.m-excited.is-saying img { animation: cdnd-host-jump .45s cubic-bezier(.3,1.6,.5,1) 4; }
+.cdnd-presenter.m-sad img { transform: rotate(-6deg) translateY(4%); filter: drop-shadow(0 10px 18px rgba(0,0,0,.6)) saturate(.7); transition: transform .4s; }
+@keyframes cdnd-host-talk { 50% { transform: rotate(2deg) scaleY(1.02); } }
+@keyframes cdnd-host-jump { 40% { transform: translateY(-9%) rotate(-3deg) scale(1.03); } 100% { transform: none; } }
+.cdnd-bubble {
+  position: absolute; left: 62%; top: 2%; width: max-content; max-width: min(330px, 30vw);
+  font: 700 17px/1.3 var(--font-body, sans-serif); color: #2a1b00;
+  background: #fffaf0; border: 3px solid #2a1b00; border-radius: 18px; padding: 10px 14px;
+  box-shadow: 4px 4px 0 rgba(0,0,0,.45);
+  opacity: 0; transform: scale(.6) translateY(10px); transform-origin: 0% 100%; transition: opacity .2s, transform .25s cubic-bezier(.2,1.6,.4,1);
+}
+.cdnd-bubble::after {
+  content: ""; position: absolute; left: 14px; bottom: -16px; border: 8px solid transparent; border-top: 10px solid #2a1b00; border-left: 10px solid #2a1b00;
+}
+.cdnd-presenter.is-saying .cdnd-bubble { opacity: 1; transform: none; }
+.cdnd-presenter.m-excited .cdnd-bubble { background: #ffe58a; font-size: 19px; }
+
+/* sur le tableau des coffres */
+.cdnd-board-host { position: fixed; height: 34vh; left: .5vw; bottom: 0; z-index: 2; transition: none; transform: none; }
+.cdnd-board.is-min .cdnd-board-host { display: none; }
+@media (max-width: 1100px) { .cdnd-board-host { display: none; } }
+@media (max-width: 900px) { .cdnd-presenter { height: 28vh; } .cdnd-bubble { font-size: 13px; } }
+.cdnd-board:has(.cdnd-board-host) .cdnd-board-panel { width: min(1120px, 78vw); margin-left: 16vw; }
+@media (max-width: 1100px) { .cdnd-board:has(.cdnd-board-host) .cdnd-board-panel { width: min(1180px, 96vw); margin-left: 0; } }
+.cdnd-board-host .cdnd-bubble { left: 55%; }
+.cdnd-presenter .cdnd-bubble { z-index: 2; left: 74%; top: 6%; }
+.cdnd-board-host .cdnd-bubble { left: 70%; top: 8%; }
+.cdnd-overlay .cdnd-bg { background: rgba(4, 8, 6, .95); }
+
+/* bouton dans l'onglet Acteurs */
+.cdnd-dir-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: calc(100% - 8px); margin: 4px 4px 6px; padding: 6px 8px; flex: 0 0 auto;
+  font-weight: 700; cursor: pointer; border-radius: 6px; line-height: 1.3;
+  color: #2a1b00; background: linear-gradient(180deg, #ffe08a, #d39b12); border: 1px solid #8a6200;
+  box-shadow: 0 0 10px rgba(255, 190, 40, .35);
+}
+.cdnd-dir-btn:hover { filter: brightness(1.08); box-shadow: 0 0 16px rgba(255, 190, 40, .6); }

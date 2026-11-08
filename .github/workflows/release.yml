@@ -1,0 +1,29 @@
+# Crée une release installable dans Foundry à chaque tag "vX.Y.Z" :
+#   git tag v1.0.1 && git push origin v1.0.1
+# Contient le module (module.json + casino-dnd.zip) et le système (system.json + casino-system.zip).
+name: Release Foundry
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version = tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          for f in module.json system.json; do jq --arg v "$VERSION" '.version = $v' $f > tmp.json && mv tmp.json $f; done
+      - name: Zips
+        run: |
+          zip -r casino-dnd.zip module.json scripts styles templates data assets
+          zip -r casino-system.zip system.json scripts styles templates data assets
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            module.json
+            system.json
+            casino-dnd.zip
+            casino-system.zip

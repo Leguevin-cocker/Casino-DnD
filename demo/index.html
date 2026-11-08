@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Casino DnD — démo des coffres</title>
+<link rel="stylesheet" href="../styles/casino.css">
+<style>
+  body { margin: 0; min-height: 100vh; font-family: system-ui, sans-serif; color: #eee;
+         background: #1b1d1c url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cpath d='M0 0h40v40H0z' fill='none' stroke='%23333' stroke-width='.5'/%3E%3C/svg%3E"); }
+  .demo { max-width: 640px; margin: 0 auto; padding: 40px 20px; }
+  h1 { margin: 0 0 4px; font-size: 26px; }
+  p { color: #aaa; margin: 0 0 20px; }
+  .card { background: #262a28; border: 1px solid #3a3f3c; border-radius: 12px; padding: 16px; display: grid; gap: 12px; }
+  label { display: grid; grid-template-columns: 150px 1fr; align-items: center; gap: 10px; font-size: 14px; }
+  select, input { background: #151816; color: #eee; border: 1px solid #444; border-radius: 6px; padding: 6px; font: inherit; }
+  .go { font-size: 18px; font-weight: 700; padding: 12px; border-radius: 10px; border: 0; cursor: pointer;
+        background: linear-gradient(180deg, #ffe08a, #d39b12); color: #2a1b00; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .row button { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #555; background: #1d211f; color: #eee; cursor: pointer; }
+  small { color: #888; }
+</style>
+</head>
+<body>
+<div class="demo">
+  <h1>🎰 Casino DnD — démo</h1>
+  <p>Simulation d'une session, comme dans Foundry (ici tu joues tous les rôles). Le son est synthétisé : monte le volume.</p>
+  <div class="card">
+    <label>PJ (noms Roll20) <input id="pjs" value="Thorin, Elara, Grub"></label>
+    <label>Pool <select id="pool"></select></label>
+    <label>Nombre de coffres <input id="count" type="number" min="1" max="12" value="5"></label>
+    <label>Chance <input id="luck" type="range" min="-3" max="5" step="1" value="1"></label>
+    <button class="go" id="go">🎁 Créer la session</button>
+    <small>Pour voir tout de suite un coffre précis :</small>
+    <div class="row">
+      <button data-force="common">bois</button>
+      <button data-force="uncommon">bronze</button>
+      <button data-force="rare">argent</button>
+      <button data-force="veryRare">or</button>
+      <button data-force="legendary">gemme</button>
+    </div>
+  </div>
+</div>
+<script type="module">
+  import { drawLoot, validatePool } from "../scripts/engine.js";
+  import { LootOverlay, copyText, showCopyBox } from "../scripts/overlay.js";
+  import { SessionBoard } from "../scripts/board.js";
+
+  let RAW = window.CDND_POOLS;
+  if (!RAW) {
+    RAW = await (await fetch("../data/pools.json")).json();
+    try { const x = await fetch("../data/extra-pools.json"); if (x.ok) RAW.push(...(await x.json())); } catch {}
+  }
+  const POOLS = RAW.map(validatePool);
+  const $ = (id) => document.getElementById(id);
+  for (const p of POOLS) $("pool").append(new Option(p.name, p.id));
+  const TITLE = "Le Casino interplanaire de Hugoblin";
+
+  const PRESENTER = window.CDND_PRESENTER ?? "../assets/presenter.png";
+  const overlay = new LootOverlay({ isGM: true, volume: 0.6, presenterSrc: PRESENTER });
+  let state = { active: false };
+  let secret = [];
+
+  const board = new SessionBoard({
+    presenterSrc: PRESENTER,
+    isGM: true,
+    getCharacters: () => $("pjs").value.split(",").map((s) => s.trim()).filter(Boolean),
+    onOpen: async (i) => {
+      if (state.opening !== null || state.chests[i].opened) return;
+      state.opening = i;
+      board.render(state);
+      await overlay.play({ title: TITLE, subtitle: `Coffre n°${i + 1} · ouvert par toi`, mode: "chest", noSummary: true, results: [{ item: secret[i] }] });
+      state.chests[i] = { opened: true, item: secret[i], openedBy: "toi", to: "" };
+      state.opening = null;
+      board.render(state);
+    },
+    onAssign: (i, to) => { state.chests[i].to = to; board.render(state); },
+    onCopy: async (text) => { if (!(await copyText(text))) showCopyBox(text); else showCopyBox(text, "Copié ! Colle-le dans le chat Roll20"); },
+    onEnd: () => { state = { active: false }; board.render(state); }
+  });
+  window.board = board; window.overlay = overlay;
+
+  function createSession(forceRarity) {
+    const pool = POOLS.find((p) => p.id === $("pool").value);
+    let count = Math.max(1, Math.min(12, Number($("count").value) || 1));
+    let forced = [];
+    if (forceRarity) {
+      const all = POOLS.flatMap((p) => p.items);
+      const it = all.find((i) => i.rarity === forceRarity);
+      secret = drawLoot({ items: [it] }, { count: 1 });
+      count = 1;
+    } else {
+      secret = drawLoot(pool, { count, luck: Number($("luck").value), forced });
+    }
+    state = { active: true, title: TITLE, source: forceRarity ? "Démo" : pool.name, opening: null, chests: secret.map(() => ({ opened: false })) };
+    board.show();
+    board.render(state);
+  }
+  window.createSession = createSession;
+  $("go").onclick = () => createSession();
+  document.querySelectorAll("[data-force]").forEach((b) => (b.onclick = () => createSession(b.dataset.force)));
+</script>
+</body>
+</html>

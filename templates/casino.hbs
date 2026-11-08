@@ -1,0 +1,111 @@
+<div class="cdnd-panel">
+  <nav class="cdnd-tabs">
+    <button type="button" data-action="tab" data-tab="session" class="{{#if tabSession}}active{{/if}}">🎁 Session</button>
+    <button type="button" data-action="tab" data-tab="pj" class="{{#if tabPj}}active{{/if}}">👥 PJ ({{pjCount}})</button>
+    <button type="button" data-action="tab" data-tab="history" class="{{#if tabHistory}}active{{/if}}">📜 Historique ({{historyCount}})</button>
+  </nav>
+
+  {{#if tabSession}}
+  <section>
+    {{#if sessionActive}}
+    <div class="cdnd-session-live">
+      <div class="cdnd-session-title">🟢 Session en cours</div>
+      <p class="cdnd-poolinfo">{{sessionInfo}}</p>
+      {{#each sessionItems}}
+      <div class="cdnd-h-item r-{{rarity}}"><span class="cdnd-dot"></span><span class="name">{{name}}</span><span class="cdnd-to">→ {{to}}</span></div>
+      {{/each}}
+      <div class="cdnd-tools">
+        <button type="button" data-action="showBoard"><i class="fa-solid fa-eye"></i> Réafficher chez tout le monde</button>
+        <button type="button" data-action="endSession"><i class="fa-solid fa-flag-checkered"></i> Terminer la session</button>
+      </div>
+    </div>
+    {{else}}
+    {{#if noPj}}<p class="cdnd-warn-txt">Astuce : ajoute tes PJ dans l'onglet 👥 PJ pour pouvoir attribuer chaque coffre.</p>{{/if}}
+    <div class="cdnd-row">
+      <label>Source</label>
+      <select data-field="sourceId">
+        {{#each sources}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+      </select>
+    </div>
+    <p class="cdnd-poolinfo">{{poolInfo}}</p>
+    <div class="cdnd-row">
+      <label>Nombre de coffres</label>
+      <input type="number" data-field="count" min="1" max="12" step="1" value="{{state.count}}">
+    </div>
+    <div class="cdnd-row">
+      <label>Chance</label>
+      <input type="range" data-field="luck" min="-3" max="5" step="1" value="{{state.luck}}">
+      <span class="cdnd-luck-val">{{luckLabel}}</span>
+    </div>
+    <div class="cdnd-row">
+      <label>Rareté minimale</label>
+      <select data-field="minRarity">
+        {{#each rarities}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+      </select>
+    </div>
+    <div class="cdnd-row">
+      <label>Sans doublons</label>
+      <input type="checkbox" data-field="unique" {{#if state.unique}}checked{{/if}}>
+    </div>
+    <div class="cdnd-row">
+      <label>Truquer 😈</label>
+      <select data-field="forced">
+        <option value="">— Au hasard —</option>
+        {{#each forcedOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+      </select>
+    </div>
+    <p class="cdnd-hint-txt">Cet objet sera caché dans un des coffres, au hasard.</p>
+
+    <button type="button" class="cdnd-spin" data-action="createSession">🎁 Créer la session</button>
+
+    <div class="cdnd-tools">
+      <button type="button" data-action="importPool"><i class="fa-solid fa-file-import"></i> Importer un pool JSON</button>
+      <button type="button" data-action="exportPool"><i class="fa-solid fa-file-export"></i> Exporter ce pool</button>
+      {{#if isCustom}}<button type="button" data-action="deletePool"><i class="fa-solid fa-trash"></i> Supprimer</button>{{/if}}
+    </div>
+    {{/if}}
+  </section>
+  {{/if}}
+
+  {{#if tabPj}}
+  <section>
+    <p class="cdnd-poolinfo">Écris les noms <b>exactement comme sur Roll20</b> : ils apparaissent dans le menu sous chaque coffre ouvert, et le script Roll20 s'en sert pour remplir la bonne fiche.</p>
+    <div class="cdnd-pj-list">
+      {{#each pjs}}
+      <div class="cdnd-pj"><span>🧝 {{name}}</span><button type="button" data-action="removePj" data-i="{{i}}" title="Retirer"><i class="fa-solid fa-xmark"></i></button></div>
+      {{else}}
+      <div class="cdnd-empty">Aucun PJ pour l'instant.</div>
+      {{/each}}
+    </div>
+    <div class="cdnd-row">
+      <input type="text" data-pj-input placeholder="Nom du personnage (ex : Thorin Écu-de-Chêne)">
+      <button type="button" class="cdnd-add" data-action="addPj"><i class="fa-solid fa-plus"></i> Ajouter</button>
+    </div>
+  </section>
+  {{/if}}
+
+  {{#if tabHistory}}
+  <section class="cdnd-history">
+    {{#each history}}
+    <div class="cdnd-h-entry" data-entry="{{id}}">
+      <div class="cdnd-h-head"><span>{{date}}</span><span>{{source}}</span></div>
+      {{#each items}}
+      <div class="cdnd-h-item r-{{rarity}}">
+        <span class="cdnd-dot" title="{{rarityLabel}}"></span>
+        <span class="name">{{name}}</span>
+        <span class="cdnd-to">→ {{to}}</span>
+        <button type="button" data-action="copyItem" data-idx="{{idx}}" title="Copier la commande Roll20 pour cet objet">📋</button>
+      </div>
+      {{/each}}
+      <div class="cdnd-h-actions">
+        <button type="button" data-action="replay">🔁 Rejouer l'animation</button>
+        <button type="button" data-action="copyEntry">📋 Tout copier (Roll20)</button>
+      </div>
+    </div>
+    {{else}}
+    <div class="cdnd-empty">Aucun tirage pour l'instant. Le Casino attend ses premiers clients…</div>
+    {{/each}}
+    {{#if hasHistory}}<button type="button" data-action="clearHistory"><i class="fa-solid fa-broom"></i> Vider l'historique</button>{{/if}}
+  </section>
+  {{/if}}
+</div>
