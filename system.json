@@ -34,7 +34,7 @@
   },
   "background": "systems/casino/assets/join-background.jpg",
   "url": "https://github.com/Leguevin-cocker/Casino-DnD",
-  "manifest": "https://github.com/Leguevin-cocker/Casino-DnD/releases/latest/download/system.json",
-  "download": "https://github.com/Leguevin-cocker/Casino-DnD/releases/latest/download/casino-system.zip",
+  "manifest": "https://raw.githubusercontent.com/Leguevin-cocker/Casino-DnD/release/system.json",
+  "download": "https://raw.githubusercontent.com/Leguevin-cocker/Casino-DnD/release/casino-system.zip",
   "bugs": "https://github.com/Leguevin-cocker/Casino-DnD/issues"
 }
