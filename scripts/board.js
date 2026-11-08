@@ -14,7 +14,8 @@ function el(tag, cls, text) {
   return e;
 }
 
-const matOf = (item) => CHEST_TIERS[Math.min(RARITY_INDEX[item.rarity] ?? 0, CHEST_TIERS.length - 1)];
+const CHEST_R = ["common", "uncommon", "rare", "veryRare", "legendary"];
+const matOf = (item) => CHEST_TIERS[item.chestRarity ? Math.max(0, CHEST_R.indexOf(item.chestRarity)) : Math.min(RARITY_INDEX[item.rarity] ?? 0, CHEST_TIERS.length - 1)];
 
 export class SessionBoard {
   /**
@@ -77,7 +78,7 @@ export class SessionBoard {
 
     const grid = el("div", "cdnd-board-grid");
     grid.style.setProperty("--n", String(Math.min(total, 6)));
-    state.chests.forEach((c, i) => grid.append(c.opened ? this._openSlot(c, i) : this._closedSlot(i, busy, state.opening === i)));
+    state.chests.forEach((c, i) => grid.append(c.opened ? this._openSlot(c, i) : this._closedSlot(i, busy, state.opening === i, CHEST_TIERS[c.tier ?? 0] ?? "wood")));
     panel.append(grid);
 
     if (this.o.isGM) {
@@ -129,9 +130,9 @@ export class SessionBoard {
     return box;
   }
 
-  _closedSlot(i, busy, opening) {
-    const slot = el("div", `cdnd-slot is-closed${busy ? " is-locked" : ""}${opening ? " is-opening" : ""}`);
-    slot.append(this._chestNode("wood", false));
+  _closedSlot(i, busy, opening, mat = "wood") {
+    const slot = el("div", `cdnd-slot is-closed m-${mat}${busy ? " is-locked" : ""}${opening ? " is-opening" : ""}`);
+    slot.append(this._chestNode(mat, false));
     slot.append(el("div", "cdnd-slot-num", `Coffre n°${i + 1}`));
     if (!busy) {
       slot.title = "Ouvrir ce coffre";

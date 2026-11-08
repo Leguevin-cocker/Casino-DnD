@@ -530,3 +530,15 @@ body.cdnd-playing .cdnd-board { visibility: hidden; }
 .casino-dnd-app .window-content { overflow-y: auto; }
 .cdnd-panel .cdnd-h { margin: 0; padding: 8px 14px 6px; font-size: 16px; border-bottom: 2px solid #d39b12; background: rgba(211, 155, 18, .12); }
 .cdnd-panel .cdnd-history { max-height: none; }
+/* curseurs par type de coffre */
+.cdnd-panel .cdnd-chest-sliders { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 8px; background: rgba(0,0,0,.08); }
+.cdnd-panel .cdnd-chest-row { display: grid; grid-template-columns: 14px 150px 1fr 26px; align-items: center; gap: 8px; }
+.cdnd-panel .cdnd-chest-row label small { opacity: .7; font-weight: 400; }
+.cdnd-panel .cdnd-chest-dot { width: 14px; height: 14px; border-radius: 4px; border: 2px solid #2a1b00; }
+.cdnd-panel .m-wood .cdnd-chest-dot { background: #9b5a2a; }
+.cdnd-panel .m-bronze .cdnd-chest-dot { background: #c47a3a; }
+.cdnd-panel .m-silver .cdnd-chest-dot { background: #dde4ea; }
+.cdnd-panel .m-gold .cdnd-chest-dot { background: #f4b827; }
+.cdnd-panel .m-gem .cdnd-chest-dot { background: linear-gradient(135deg, #b8fbff, #9b6bff, #ff6fd8); }
+.cdnd-panel .cdnd-count-val { font-weight: 700; text-align: center; font-size: 16px; }
+.cdnd-panel .cdnd-chest-total { text-align: right; font-size: 13px; }

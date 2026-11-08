@@ -23,21 +23,22 @@
       </select>
     </div>
     <p class="cdnd-poolinfo">{{poolInfo}}</p>
-    <div class="cdnd-row">
-      <label>Nombre de coffres</label>
-      <input type="number" data-field="count" min="1" max="12" step="1" value="{{state.count}}">
+    <div class="cdnd-chest-sliders">
+      {{#each chestRows}}
+      <div class="cdnd-chest-row m-{{mat}}">
+        <span class="cdnd-chest-dot"></span>
+        <label><b>{{label}}</b> <small>{{rarity}} · {{available}} objets</small></label>
+        <input type="range" data-field="count.{{key}}" min="0" max="10" step="1" value="{{value}}">
+        <span class="cdnd-count-val" data-count-val="{{key}}">{{value}}</span>
+      </div>
+      {{/each}}
+      <div class="cdnd-chest-total">Total : <b data-chest-total>{{chestTotal}}</b> coffre(s)</div>
     </div>
     <div class="cdnd-row">
-      <label>Chance</label>
-      <input type="range" data-field="luck" min="-3" max="5" step="1" value="{{state.luck}}">
-      <span class="cdnd-luck-val">{{luckLabel}}</span>
+      <label>Coffres mystère</label>
+      <input type="checkbox" data-field="mystery" {{#if state.mystery}}checked{{/if}}>
     </div>
-    <div class="cdnd-row">
-      <label>Rareté minimale</label>
-      <select data-field="minRarity">
-        {{#each rarities}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
-      </select>
-    </div>
+    <p class="cdnd-hint-txt">Coché : tous les coffres ont l'air en bois et montent en gamme à l'ouverture. Sinon, on voit leur matière.</p>
     <div class="cdnd-row">
       <label>Sans doublons</label>
       <input type="checkbox" data-field="unique" {{#if state.unique}}checked{{/if}}>
@@ -49,7 +50,7 @@
         {{#each forcedOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
       </select>
     </div>
-    <p class="cdnd-hint-txt">Cet objet sera caché dans un des coffres, au hasard.</p>
+    <p class="cdnd-hint-txt">Cet objet sera mis dans un coffre de sa rareté (ajouté si besoin).</p>
 
     <button type="button" class="cdnd-spin" data-action="createSession">🎁 Créer la session</button>
 

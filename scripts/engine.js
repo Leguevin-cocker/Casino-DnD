@@ -202,6 +202,57 @@ export function drawLoot(pool, { count = 1, luck = 0, minRarity = "common", uniq
   return results;
 }
 
+/** Rareté du coffre pour chacun des 5 types (la gemme couvre légendaire + artefact). */
+export const CHEST_RARITIES = ["common", "uncommon", "rare", "veryRare", "legendary"];
+
+/**
+ * Un objet par coffre, de la rareté de son coffre.
+ * counts = { common: 3, uncommon: 2, rare: 1, veryRare: 0, legendary: 0 }
+ * Si le pool n'a aucun objet d'une rareté, on prend la rareté disponible la plus proche.
+ * forced = index d'un objet du pool, placé dans un coffre de sa rareté (ajouté au besoin).
+ */
+export function drawByRarity(pool, counts = {}, { unique = true, forced, rng = defaultRng } = {}) {
+  const byR = {};
+  for (const it of pool.items) {
+    let r = normRarity(it.rarity);
+    if (r === "artifact") r = "legendary";
+    (byR[r] ??= []).push(it);
+  }
+  const avail = CHEST_RARITIES.filter((r) => byR[r]?.length);
+  if (!avail.length) return [];
+  const nearest = (r) => {
+    if (byR[r]?.length) return r;
+    const i = CHEST_RARITIES.indexOf(r);
+    return [...avail].sort((a, b) => Math.abs(CHEST_RARITIES.indexOf(a) - i) - Math.abs(CHEST_RARITIES.indexOf(b) - i) || CHEST_RARITIES.indexOf(a) - CHEST_RARITIES.indexOf(b))[0];
+  };
+  const want = {};
+  for (const r of CHEST_RARITIES) want[r] = Math.max(0, Math.min(20, Number(counts[r]) || 0));
+  const forcedDef = forced !== undefined && forced !== null && forced !== "" ? pool.items[Number(forced)] : null;
+  let forcedR = null;
+  if (forcedDef) {
+    forcedR = normRarity(forcedDef.rarity) === "artifact" ? "legendary" : normRarity(forcedDef.rarity);
+    if (!want[forcedR]) want[forcedR] = 1;
+  }
+  const used = new Set();
+  const out = [];
+  for (const r of CHEST_RARITIES) {
+    for (let n = 0; n < want[r]; n++) {
+      let def = null;
+      if (forcedDef && forcedR === r && !used.has(forcedDef)) def = forcedDef;
+      if (!def) {
+        const list = byR[nearest(r)];
+        const fresh = unique ? list.filter((i) => !used.has(i)) : list;
+        def = weightedPick(fresh.length ? fresh : list, (i) => i.chance ?? 1, rng);
+      }
+      used.add(def);
+      const item = resolveItem(def, rng);
+      item.chestRarity = r;
+      out.push(item);
+    }
+  }
+  return out;
+}
+
 const stripCard = (it) => ({ name: it.name, rarity: normRarity(it.rarity), type: it.type, icon: it.icon, img: it.img });
 
 /**

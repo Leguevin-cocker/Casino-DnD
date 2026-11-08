@@ -9,6 +9,14 @@ import { createSession, endSession, replay, getCharacters, setCharacters } from 
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
+const CHEST_ROWS = [
+  { key: "common", label: "Bois", rarity: "commun", mat: "wood" },
+  { key: "uncommon", label: "Bronze", rarity: "peu commun", mat: "bronze" },
+  { key: "rare", label: "Argent", rarity: "rare", mat: "silver" },
+  { key: "veryRare", label: "Or", rarity: "très rare", mat: "gold" },
+  { key: "legendary", label: "Gemme", rarity: "légendaire", mat: "gem" }
+];
+
 const LUCK_LABELS = { "-3": "😭", "-2": "😟", "-1": "😕", "0": "🙂", "1": "😊", "2": "😄", "3": "🤩", "4": "🍀", "5": "👑" };
 
 async function copy(text) {
@@ -53,7 +61,11 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
   constructor(options = {}) {
     super(options);
     const saved = game.settings.get(MODULE_ID, "panelState") ?? {};
-    this.casino = { sourceId: "builtin:tresor-donjon", count: 3, luck: 0, minRarity: "common", unique: false, ...saved, forced: "" };
+    this.casino = {
+      sourceId: "", counts: { common: 2, uncommon: 2, rare: 1, veryRare: 0, legendary: 0 },
+      mystery: false, unique: true, ...saved, forced: ""
+    };
+    this.casino.counts = { common: 0, uncommon: 0, rare: 0, veryRare: 0, legendary: 0, ...(this.casino.counts ?? {}) };
     this.tab = getCharacters().length ? "session" : "pj";
   }
 
@@ -65,7 +77,10 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
   async _prepareContext() {
     const s = this.casino;
     const sources = await listSources();
-    if (!sources.some((x) => x.id === s.sourceId)) s.sourceId = sources[0]?.id;
+    if (!sources.some((x) => x.id === s.sourceId)) {
+      // par défaut : les objets du PDF s'ils sont installés
+      s.sourceId = (sources.find((x) => x.id === "builtin:mythical-ink") ?? sources[0])?.id;
+    }
     let pool = null, poolError = null;
     try { pool = await loadPool(s.sourceId); } catch (e) { poolError = e.message; }
 
@@ -107,7 +122,8 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
       poolInfo,
       rarities: sel(RARITIES.map((r) => ({ value: r.key, label: r.key === "common" ? "Aucune" : `${r.label} ou mieux` })), s.minRarity),
       forcedOptions: sel(forcedOptions, s.forced),
-      luckLabel: `${s.luck > 0 ? "+" : ""}${s.luck} ${LUCK_LABELS[String(s.luck)] ?? ""}`,
+      chestRows: CHEST_ROWS.map((r) => ({ ...r, value: s.counts[r.key] ?? 0, available: counts[r.key] ?? (r.key === "legendary" ? counts.artifact ?? 0 : 0) })),
+      chestTotal: Object.values(s.counts).reduce((a, b) => a + (Number(b) || 0), 0),
       history,
       historyCount: history.length,
       hasHistory: history.length > 0
@@ -127,6 +143,17 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
         });
       }
     });
+    root.querySelectorAll("[data-field^='count.']").forEach((input) => {
+      input.addEventListener("input", (ev) => {
+        const key = ev.currentTarget.dataset.field.slice(6);
+        const v = Number(ev.currentTarget.value) || 0;
+        const lbl = root.querySelector(`[data-count-val="${key}"]`);
+        if (lbl) lbl.textContent = String(v);
+        const counts = { ...this.casino.counts, [key]: v };
+        const total = Object.values(counts).reduce((a, b) => a + (Number(b) || 0), 0);
+        root.querySelectorAll("[data-chest-total]").forEach((n) => { n.textContent = String(total); });
+      });
+    });
     const pjInput = root.querySelector("[data-pj-input]");
     pjInput?.addEventListener("keydown", (ev) => {
       if (ev.key === "Enter") { ev.preventDefault(); CasinoApp._onAddPj.call(this); }
@@ -136,8 +163,11 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
   _onField(input) {
     const name = input.dataset.field;
     let value = input.type === "checkbox" ? input.checked : input.value;
-    if (name === "count") value = Math.max(1, Math.min(12, Number(value) || 1));
-    if (name === "luck") value = Number(value) || 0;
+    if (name.startsWith("count.")) {
+      this.casino.counts[name.slice(6)] = Math.max(0, Math.min(10, Number(value) || 0));
+      this._saveState();
+      return;
+    }
     this.casino[name] = value;
     this._saveState();
     if (name === "sourceId") { this.casino.forced = ""; this.render(); }
@@ -153,7 +183,7 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static async _onCreateSession() {
     const s = this.casino;
     try {
-      await createSession({ sourceId: s.sourceId, count: s.count, luck: s.luck, minRarity: s.minRarity, unique: s.unique, forced: s.forced });
+      await createSession({ sourceId: s.sourceId, counts: s.counts, mystery: s.mystery, unique: s.unique, forced: s.forced });
       s.forced = "";
     } catch (e) {
       console.error(e);

@@ -8,7 +8,7 @@
  *  3. Un clic sur un coffre -> le MJ (qui fait autorité) lance l'animation chez tous.
  *  4. Le coffre revient ouvert sur le tableau : objet, choix du PJ, commande Roll20.
  */
-import { drawLoot, buildStrip, roll20Command, parseWeights, rarityInfo, typeInfo } from "./engine.js";
+import { drawLoot, drawByRarity, CHEST_RARITIES, buildStrip, roll20Command, parseWeights, rarityInfo, typeInfo } from "./engine.js";
 import { LootOverlay, copyText, showCopyBox, displayName } from "./overlay.js";
 import { SessionBoard } from "./board.js";
 import { MODULE_ID, PKG_TYPE, PKG_PATH, SOCKET, loadPool, listSources } from "./sources.js";
@@ -191,23 +191,30 @@ async function ensureCasinoScene() {
 export async function createSession(o = {}) {
   if (!game.user.isGM) return;
   const pool = await loadPool(o.sourceId ?? "builtin:tresor-donjon");
-  const count = Math.max(1, Math.min(12, Number(o.count) || 3));
-  const items = drawLoot(pool, {
-    count, luck: Number(o.luck) || 0, minRarity: o.minRarity || "common", unique: !!o.unique,
-    forced: o.forced !== undefined && o.forced !== "" ? [o.forced] : [],
-    weights: pool.rarityWeights ? undefined : parseWeights(setting("weights"))
-  });
-  if (!items.length) return ui.notifications.warn("Rien à tirer dans ce pool.");
-  // l'objet truqué (le 1er tiré) est caché dans un coffre au hasard
-  if (o.forced !== undefined && o.forced !== "" && items.length > 1) {
-    const j = Math.floor(Math.random() * items.length);
-    [items[0], items[j]] = [items[j], items[0]];
+  const mystery = !!o.mystery;
+  let items;
+  if (o.counts) {
+    // un objet par coffre, de la rareté du coffre
+    items = drawByRarity(pool, o.counts, { unique: o.unique !== false, forced: o.forced });
+  } else {
+    const count = Math.max(1, Math.min(12, Number(o.count) || 3));
+    items = drawLoot(pool, {
+      count, luck: Number(o.luck) || 0, minRarity: o.minRarity || "common", unique: !!o.unique,
+      forced: o.forced !== undefined && o.forced !== "" ? [o.forced] : [],
+      weights: pool.rarityWeights ? undefined : parseWeights(setting("weights"))
+    });
+    items.forEach((i) => { i.chestRarity = i.rarity === "artifact" ? "legendary" : i.rarity; });
+  }
+  if (!items.length) return ui.notifications.warn("Aucun coffre : mets au moins un curseur au-dessus de 0.");
+  // coffres mystère : ordre mélangé (sinon, du bois à la gemme)
+  if (mystery) {
+    for (let i = items.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [items[i], items[j]] = [items[j], items[i]]; }
   }
   const id = foundry.utils.randomID();
   await game.settings.set(MODULE_ID, "sessionSecret", { id, items });
   await game.settings.set(MODULE_ID, "session", {
-    active: true, id, ownerId: game.user.id, title: setting("title"), source: pool.name, createdAt: Date.now(), opening: null,
-    chests: items.map(() => ({ opened: false }))
+    active: true, id, ownerId: game.user.id, title: setting("title"), source: pool.name, createdAt: Date.now(), opening: null, mystery,
+    chests: items.map((i) => ({ opened: false, tier: mystery ? 0 : Math.max(0, CHEST_RARITIES.indexOf(i.chestRarity)) }))
   });
   board.show();
   game.socket.emit(SOCKET, { action: "show-board" });
@@ -269,7 +276,7 @@ async function gmOpen(sessionId, index, userId) {
       subtitle: `Coffre n°${index + 1}${opener ? ` · ouvert par ${opener}` : ""}`,
       mode: "chest",
       noSummary: true,
-      results: [{ item }]
+      results: [{ item, startTier: st.mystery ? 0 : (st.chests[index]?.tier ?? 0), targetTier: Math.max(0, CHEST_RARITIES.indexOf(item.chestRarity ?? item.rarity)) }]
     };
     game.socket.emit(SOCKET, { action: "play", payload });
     await overlay.play(payload);

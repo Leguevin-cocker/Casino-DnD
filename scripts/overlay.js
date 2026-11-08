@@ -406,7 +406,8 @@ export class LootOverlay {
   async _chest(result) {
     const { item } = result;
     const r = RARITY_INDEX[item.rarity];
-    const target = Math.min(r, CHEST_TIERS.length - 1);
+    const target = Math.min(result.targetTier ?? r, CHEST_TIERS.length - 1);
+    const startTier = Math.min(Math.max(0, result.startTier ?? 0), target);
 
     const scene = el("div", `cdnd-chest-scene r-${item.rarity}`);
     const chest = el("div", "cdnd-chest");
@@ -439,7 +440,7 @@ export class LootOverlay {
     };
     const pop = () => { chest.classList.remove("is-pop"); void chest.offsetWidth; chest.classList.add("is-pop"); };
 
-    setMat(this._skip ? CHEST_TIERS[target] : "wood");
+    setMat(this._skip ? CHEST_TIERS[target] : CHEST_TIERS[startTier]);
     this.$content.replaceChildren(scene);
     await frame();
     dropper.classList.add("is-dropped");
@@ -447,7 +448,7 @@ export class LootOverlay {
     if (!this._skip) { this.sfx.thud(); this._shake(0.5); }
     await this._wait(650);
 
-    for (let lvl = 1; lvl <= target && !this._skip && !this._closed; lvl++) {
+    for (let lvl = startTier + 1; lvl <= target && !this._skip && !this._closed; lvl++) {
       const mat = CHEST_TIERS[lvl];
       chest.style.setProperty("--next", MAT_COLORS[mat]);
       chest.style.setProperty("--charge", String(lvl));
