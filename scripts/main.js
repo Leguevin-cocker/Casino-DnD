@@ -84,22 +84,27 @@ Hooks.once("init", () => {
 });
 
 /* ------------------------------------------------------------------ */
-/* Bouton dans la barre d'outils (jetons)                               */
+/* Bouton « Casino » dans l'onglet Acteurs, sous Créer un acteur / dossier */
 /* ------------------------------------------------------------------ */
-Hooks.on("getSceneControlButtons", (controls) => {
-  const gm = game.user?.isGM;
-  const base = {
-    name: MODULE_ID, title: gm ? "Casino — coffres de loot" : "Casino — afficher les coffres",
-    icon: "fa-solid fa-dice", button: true, visible: true
-  };
-  const click = () => (gm ? CasinoApp.open() : board?.show());
-  if (Array.isArray(controls)) {
-    controls.find((c) => c.name === "token")?.tools.push({ ...base, onClick: click });
-  } else {
-    const tokens = controls.tokens ?? controls.token;
-    if (tokens?.tools) tokens.tools[MODULE_ID] = { ...base, order: 99, onChange: click };
-  }
-});
+function addDirectoryButton(app, html) {
+  const root = html instanceof HTMLElement ? html : html?.[0] ?? app?.element;
+  if (!root || root.querySelector(".cdnd-dir-btn")) return;
+  const gm = game.user.isGM;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "cdnd-dir-btn";
+  btn.innerHTML = `<i class="fa-solid fa-dice"></i> ${gm ? "Casino — coffres de loot" : "Afficher les coffres du Casino"}`;
+  btn.addEventListener("click", (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (gm) CasinoApp.open();
+    else board?.show();
+  });
+  const actions = root.querySelector(".header-actions");
+  if (actions) actions.insertAdjacentElement("afterend", btn);
+  else (root.querySelector(".directory-header") ?? root).prepend(btn);
+}
+Hooks.on("renderActorDirectory", addDirectoryButton);
 
 /* ------------------------------------------------------------------ */
 /* Prêt : overlay, tableau, socket, API                                 */
