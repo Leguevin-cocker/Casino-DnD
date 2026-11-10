@@ -25,7 +25,7 @@
 var CasinoLoot = CasinoLoot || (function () {
   "use strict";
 
-  var VERSION = "1.2.0";
+  var VERSION = "1.3.0";
   var PREFIX = "CDND1.";
   var INBOX = "Casino Inbox";
 
@@ -315,6 +315,15 @@ var CasinoLoot = CasinoLoot || (function () {
     return q > 1 && String(it.name).indexOf(String(q)) === -1 ? it.name + " ×" + q : it.name;
   }
 
+  /** Lien vers l'entrée du compendium Roll20 (D&D 5e) : à ouvrir puis glisser sur la fiche. */
+  function compendiumUrl(it) {
+    var name = String(it.compendium || it.name || "").replace(/\s*\((?:\d+[^)]*|x\d+)\)\s*$/i, "").trim();
+    return "https://roll20.net/compendium/dnd5e/" + encodeURIComponent(name);
+  }
+  function compendiumLink(it, label) {
+    return '<a href="' + compendiumUrl(it) + '" style="color:#7a4d00;font-weight:bold">' + (label || "📖 Compendium") + "</a>";
+  }
+
   function handoutHtml(it, who) {
     var r = RARITY[rarityKey(it.rarity)], st = statLine(it), meta = [];
     if (it.value) meta.push("💰 " + esc(it.value));
@@ -326,6 +335,10 @@ var CasinoLoot = CasinoLoot || (function () {
       (st ? "<p><b>" + esc(st) + "</b></p>" : "") +
       (it.description ? "<p>" + nl2br(it.description) + "</p>" : "") +
       (meta.length ? "<p>" + meta.join(" &nbsp; ") + "</p>" : "") +
+      (it.currency ? "" : '<p style="background:#fff3cf;border:1px solid #e0b84a;border-radius:6px;padding:6px">' +
+        compendiumLink(it, "📖 Ouvrir « " + esc(it.name) + " » dans le compendium") +
+        "<br><small>Dans la fenêtre du compendium, attrape le titre de l'objet et glisse-le sur la fiche du personnage pour l'ajouter à son inventaire. " +
+        "(Si la page est vide, l'objet n'existe pas dans le compendium : ajoute-le à la main.)</small></p>") +
       '<p style="font-size:11px;color:#777">🎰 Casino — ' + esc(who) + " · " + new Date().toLocaleDateString("fr-FR") + "</p></div>";
   }
 
@@ -357,6 +370,7 @@ var CasinoLoot = CasinoLoot || (function () {
         '<div style="font-size:10px;color:' + r.color + ';font-weight:bold">' + esc(r.label) + ' <span style="color:#777;font-weight:normal">· ' + esc(typeLine(it)) + "</span></div>" +
         (st ? '<div style="font-size:11px;color:#333">' + esc(st) + "</div>" : "") +
         (desc ? '<div style="font-size:11px;color:#444;margin-top:2px">' + nl2br(desc) + "</div>" : "") +
+        (it.currency ? "" : '<div style="font-size:10px;margin-top:2px">' + compendiumLink(it) + "</div>") +
         "</div>";
     }).join("");
     var top = RARITY[best].color;
@@ -448,9 +462,8 @@ var CasinoLoot = CasinoLoot || (function () {
       whisperGM('<div style="font-size:11px">✔ <b>' + esc(whoLabel) + "</b> (fiche D&amp;D 2024) : " +
         (items.length - notOnSheet.length ? (items.length - notOnSheet.length) + " lot(s) de pièces ajouté(s) à la bourse. " : "") +
         (notOnSheet.length ? "<br>⚠ Roll20 ne permet pas encore aux scripts d'ajouter un objet à l'inventaire de la fiche 2024 : " +
-          notOnSheet.map(function (i) { return "<b>" + esc(i.name) + "</b>"; }).join(", ") +
-          " → handout créé ; ajoute-le à la main (onglet Inventory) ou glisse-le depuis le compendium. " +
-          "<code>!loot --diag</code> (jeton sélectionné) pour me montrer ce que ta fiche expose." : "") + "</div>");
+          notOnSheet.map(function (i) { return "<b>" + esc(i.name) + "</b> (" + compendiumLink(i, "📖 compendium") + ")"; }).join(", ") +
+          "<br>➜ clique sur 📖, puis glisse le titre de l'objet sur la fiche. Le handout contient le même lien." : "") + "</div>");
     } else if (sheet || handouts) {
       whisperGM('<div style="font-size:11px">✔ ' + items.length + " objet(s) pour <b>" + esc(whoLabel) + "</b>" +
         (sheet ? " — ajouté(s) à l'inventaire" : "") + (handouts ? " — handout(s) créé(s)" : "") + "</div>");
