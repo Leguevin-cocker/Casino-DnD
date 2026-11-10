@@ -5,7 +5,8 @@
 import { RARITIES, rarityInfo, validatePool, normRarity, roll20CommandMulti } from "./engine.js";
 import { displayName, copyText, showCopyBox } from "./overlay.js";
 import { MODULE_ID, PKG_PATH, listSources, loadPool, saveCustomPool, deleteCustomPool } from "./sources.js";
-import { createSession, endSession, replay, getCharacters, setCharacters } from "./main.js";
+import { createSession, endSession, replay, getCharacters, setCharacters, createPJ, pjActors, legacyCharacters } from "./main.js";
+import { pjHistory } from "./actor-sheet.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -45,6 +46,7 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
       endSession: CasinoApp._onEndSession,
       showBoard: CasinoApp._onShowBoard,
       addPj: CasinoApp._onAddPj,
+      openPj: CasinoApp._onOpenPj,
       removePj: CasinoApp._onRemovePj,
       importPool: CasinoApp._onImportPool,
       exportPool: CasinoApp._onExportPool,
@@ -105,13 +107,16 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }));
 
     const sel = (list, cur) => list.map((o) => ({ ...o, selected: String(o.value) === String(cur) }));
-    const pjs = getCharacters();
+    const pjs = [
+      ...pjActors().map((a) => ({ name: a.name, actorId: a.id, img: a.img, count: pjHistory(a).length })),
+      ...legacyCharacters().filter((n) => !game.actors.getName(n)).map((name) => ({ name, actorId: "", count: 0 }))
+    ];
     return {
       state: s,
       tabSession: this.tab === "session",
       tabPj: this.tab === "pj",
       tabHistory: this.tab === "history",
-      pjs: pjs.map((name, i) => ({ name, i })),
+      pjs,
       pjCount: pjs.length,
       noPj: !pjs.length,
       sessionActive: !!session.active,
@@ -205,15 +210,20 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const input = this.element.querySelector("[data-pj-input]");
     const name = input?.value.trim();
     if (!name) return;
-    await setCharacters([...getCharacters(), name]);
+    const actor = await createPJ(name);
+    if (actor) ui.notifications.info(`Fiche de PJ « ${actor.name} » créée (onglet Acteurs).`);
     this.render();
   }
 
   static async _onRemovePj(event, target) {
-    const list = getCharacters();
-    list.splice(Number(target.dataset.i), 1);
-    await setCharacters(list);
+    const { actorId, name } = target.dataset;
+    if (actorId) await game.actors.get(actorId)?.setFlag(MODULE_ID, "isPJ", false);
+    else await setCharacters(legacyCharacters().filter((n) => n !== name));
     this.render();
+  }
+
+  static _onOpenPj(event, target) {
+    game.actors.get(target.dataset.actorId)?.sheet?.render({ force: true });
   }
 
   static _onImportPool() {

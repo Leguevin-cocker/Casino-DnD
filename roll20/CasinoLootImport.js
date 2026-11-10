@@ -25,7 +25,7 @@
 var CasinoLoot = CasinoLoot || (function () {
   "use strict";
 
-  var VERSION = "1.0.0";
+  var VERSION = "1.1.0";
   var PREFIX = "CDND1.";
   var INBOX = "Casino Inbox";
 
@@ -305,13 +305,23 @@ var CasinoLoot = CasinoLoot || (function () {
 
   function findCharacter(name) {
     if (!name) return null;
-    var n = norm(name), all = findObjs({ _type: "character" });
-    var exact = all.filter(function (c) { return norm(c.get("name")) === n; });
-    if (exact.length) return exact[0];
-    var starts = all.filter(function (c) { return norm(c.get("name")).indexOf(n) === 0; });
-    if (starts.length === 1) return starts[0];
-    var inc = all.filter(function (c) { return norm(c.get("name")).indexOf(n) !== -1; });
-    return inc.length === 1 ? inc[0] : null;
+    var all = findObjs({ _type: "character" });
+    // « Aristeus Vesperos (Rémi) » -> on essaie aussi « Aristeus Vesperos »
+    var tries = [norm(name), norm(String(name).replace(/\s*\([^)]*\)\s*/g, " "))];
+    for (var t = 0; t < tries.length; t++) {
+      var n = tries[t];
+      if (!n) continue;
+      var exact = all.filter(function (c) { return norm(c.get("name")) === n; });
+      if (exact.length) return exact[0];
+      var starts = all.filter(function (c) { return norm(c.get("name")).indexOf(n) === 0; });
+      if (starts.length === 1) return starts[0];
+      var inc = all.filter(function (c) { return norm(c.get("name")).indexOf(n) !== -1; });
+      if (inc.length === 1) return inc[0];
+      // le nom Roll20 est contenu dans le nom Foundry (ex : « Marek » dans « Marek "Le Baldurien" »)
+      var rev = all.filter(function (c) { var cn = norm(c.get("name")); return cn.length > 2 && n.indexOf(cn) === 0; });
+      if (rev.length === 1) return rev[0];
+    }
+    return null;
   }
 
   function selectedCharacter(msg) {

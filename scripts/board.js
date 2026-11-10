@@ -83,7 +83,7 @@ export class SessionBoard {
 
     if (this.o.isGM) {
       const foot = el("footer", "cdnd-board-foot");
-      const assigned = state.chests.filter((c) => c.opened);
+      const assigned = state.chests.filter((c) => c.opened && c.to);
       if (assigned.length) {
         const all = el("button", "cdnd-btn cdnd-gold", "📋 Copier toutes les commandes Roll20");
         all.addEventListener("click", () => this.o.onCopy(roll20CommandMulti(assigned.map((c) => ({ item: c.item, to: c.to })))));
@@ -166,18 +166,23 @@ export class SessionBoard {
     slot.append(sel);
 
     if (this.o.isGM || this.o.showCode?.()) {
-      const cmd = roll20Command([item], c.to || null);
-      const code = el("div", "cdnd-slot-code");
-      const input = el("input");
-      input.readOnly = true;
-      input.value = cmd;
-      input.addEventListener("focus", () => input.select());
-      const btn = el("button", "cdnd-btn cdnd-small", "📋");
-      btn.title = c.to ? `Copier la commande pour ${c.to}` : "Copier la commande (choisis d'abord un PJ pour remplir sa fiche)";
-      btn.addEventListener("click", () => this.o.onCopy(cmd));
-      code.append(input, btn);
-      slot.append(code);
-      if (!c.to) slot.append(el("div", "cdnd-slot-warn", "Choisis un PJ pour que l'objet arrive sur sa fiche Roll20."));
+      if (c.to) {
+        // la commande n'existe qu'une fois le PJ choisi : elle importe directement sur sa fiche Roll20
+        const cmd = roll20Command([item], c.to);
+        const code = el("div", "cdnd-slot-code");
+        const input = el("input");
+        input.readOnly = true;
+        input.value = cmd;
+        input.addEventListener("focus", () => input.select());
+        const btn = el("button", "cdnd-btn cdnd-small", "📋");
+        btn.title = `Copier la commande pour ${c.to}`;
+        btn.addEventListener("click", () => this.o.onCopy(cmd));
+        code.append(input, btn);
+        slot.append(code);
+        slot.append(el("div", "cdnd-slot-ok", `Commande prête pour ${c.to}`));
+      } else {
+        slot.append(el("div", "cdnd-slot-warn", "Choisis un PJ pour générer la commande Roll20."));
+      }
     }
     return slot;
   }

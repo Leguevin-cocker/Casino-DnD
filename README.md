@@ -57,7 +57,9 @@ Ensuite, dans ton monde : *Gérer les modules → Casino DnD → activer*.
 Clique sur le bouton 🎲 **Casino** dans la barre d'outils des jetons, à gauche. Chez les joueurs, ce même bouton réaffiche le tableau des coffres s'ils l'ont réduit.
 
 ### 👥 PJ
-Ajoute tes personnages un par un, avec leur nom **exact sur Roll20**. Ce sont eux qui apparaissent dans le menu sous chaque coffre ouvert.
+Dans le système Casino, chaque **fiche de personnage** (onglet Acteurs) a une case **« PJ du Casino »**, cochée par défaut. Les fiches cochées apparaissent dans le menu « Pour quel PJ ? » sous chaque coffre ouvert. Le nom de la fiche doit être celui du personnage sur Roll20. Une mention entre parenthèses (ex. « Lehira (Margaux) ») est ignorée par le script Roll20.
+
+Chaque attribution s'inscrit dans l'**historique** de la fiche du PJ : objet, date, coffre, qui l'a ouvert, et un bouton 📋 pour recopier sa commande Roll20. Si on change de PJ, l'objet passe d'une fiche à l'autre.
 
 ### 🎁 Session
 - **Source** : un pool fourni (🎰 *Trésor de donjon*, *Coffre du boss*, *Échoppe de l'apothicaire*), un pool que tu as importé (📦), ou **n'importe quelle table aléatoire de ton monde** (🎲). Les objets dnd5e liés dans une table sont convertis automatiquement (rareté, dégâts, CA, prix, description).
@@ -71,7 +73,7 @@ Le contenu des coffres est tiré dès la création, mais il reste **dans le navi
 
 Pendant la session :
 - **Ouverture** : n'importe qui (joueur ou MJ) clique sur un coffre fermé. Un seul coffre s'ouvre à la fois : les autres sont verrouillés pendant l'animation.
-- **Attribution** : sous un coffre ouvert, le menu **« Pour quel PJ ? »** choisit le destinataire. La commande Roll20 juste en dessous se met à jour, avec le bouton 📋 pour la copier.
+- **Attribution** : sous un coffre ouvert, le menu **« Pour quel PJ ? »** choisit le destinataire. La commande Roll20 n'apparaît qu'ensuite, déjà adressée à ce PJ, avec le bouton 📋 pour la copier.
 - **Tout copier** : *📋 Copier toutes les commandes Roll20* donne **une seule commande** pour tous les coffres ouverts, chaque objet partant vers son PJ.
 - **Fin** : *Terminer la session* ferme le tableau chez tout le monde.
 - **Historique** : l'onglet 📜 garde les sessions (objet → PJ) et permet de recopier une commande ou de rejouer l'animation.

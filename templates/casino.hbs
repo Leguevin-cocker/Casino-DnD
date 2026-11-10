@@ -64,17 +64,26 @@
 
   <h3 class="cdnd-h">👥 PJ ({{pjCount}})</h3>
   <section>
-    <p class="cdnd-poolinfo">Écris les noms <b>exactement comme sur Roll20</b> : ils apparaissent dans le menu sous chaque coffre ouvert, et le script Roll20 s'en sert pour remplir la bonne fiche.</p>
+    <p class="cdnd-poolinfo">Les fiches cochées « PJ du Casino » (onglet Acteurs) apparaissent ici et dans le menu sous chaque coffre. Leur nom doit être <b>exactement</b> celui du personnage sur Roll20.</p>
     <div class="cdnd-pj-list">
       {{#each pjs}}
-      <div class="cdnd-pj"><span>🧝 {{name}}</span><button type="button" data-action="removePj" data-i="{{i}}" title="Retirer"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="cdnd-pj">
+        {{#if actorId}}
+        <a class="cdnd-pj-open" data-action="openPj" data-actor-id="{{actorId}}" title="Ouvrir la fiche (historique)">
+          <img src="{{img}}" alt=""> {{name}} <small>· {{count}} objet(s)</small>
+        </a>
+        {{else}}
+        <span>🧝 {{name}} <small>(sans fiche)</small></span>
+        {{/if}}
+        <button type="button" data-action="removePj" data-actor-id="{{actorId}}" data-name="{{name}}" title="Retirer des PJ (la fiche n'est pas supprimée)"><i class="fa-solid fa-xmark"></i></button>
+      </div>
       {{else}}
       <div class="cdnd-empty">Aucun PJ pour l'instant.</div>
       {{/each}}
     </div>
     <div class="cdnd-row">
-      <input type="text" data-pj-input placeholder="Nom du personnage (ex : Thorin Écu-de-Chêne)">
-      <button type="button" class="cdnd-add" data-action="addPj"><i class="fa-solid fa-plus"></i> Ajouter</button>
+      <input type="text" data-pj-input placeholder="Nom du personnage sur Roll20 (ex : Thorin Écu-de-Chêne)">
+      <button type="button" class="cdnd-add" data-action="addPj"><i class="fa-solid fa-plus"></i> Créer le PJ</button>
     </div>
   </section>
 

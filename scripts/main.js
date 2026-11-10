@@ -8,11 +8,12 @@
  *  3. Un clic sur un coffre -> le MJ (qui fait autorité) lance l'animation chez tous.
  *  4. Le coffre revient ouvert sur le tableau : objet, choix du PJ, commande Roll20.
  */
-import { drawLoot, drawByRarity, CHEST_RARITIES, buildStrip, roll20Command, parseWeights, rarityInfo, typeInfo } from "./engine.js";
+import { drawLoot, drawByRarity, CHEST_RARITIES, buildStrip, roll20Command, exportableItem, parseWeights, rarityInfo, typeInfo } from "./engine.js";
 import { LootOverlay, copyText, showCopyBox, displayName } from "./overlay.js";
 import { SessionBoard } from "./board.js";
 import { MODULE_ID, PKG_TYPE, PKG_PATH, SOCKET, loadPool, listSources } from "./sources.js";
 import { CasinoApp } from "./casino-app.js";
+import { CasinoActorSheet, isPJ, moveHistoryEntry } from "./actor-sheet.js";
 
 const HISTORY_MAX = 50;
 let overlay = null;
@@ -25,8 +26,27 @@ const clone = (o) => foundry.utils.deepClone(o);
 const holdsSession = (sessionId) => game.user.isGM && setting("sessionSecret")?.id === sessionId;
 const isLeadGM = () => game.user.isGM && (game.users.activeGM ? game.users.activeGM.id === game.user.id : true);
 
-export function getCharacters() {
+/** Noms des PJ : fiches cochées « PJ du Casino » + anciens noms saisis à la main. */
+export function legacyCharacters() {
   return String(setting("characters") || "").split(",").map((x) => x.trim()).filter(Boolean);
+}
+export function pjActors() {
+  return (game.actors?.contents ?? []).filter((a) => isPJ(a)).sort((a, b) => a.name.localeCompare(b.name));
+}
+export function getCharacters() {
+  return [...new Set([...pjActors().map((a) => a.name), ...legacyCharacters()])];
+}
+/** Crée une fiche de PJ (système Casino) ou, à défaut, l'ajoute à la liste manuelle. */
+export async function createPJ(name) {
+  name = String(name ?? "").trim();
+  if (!name) return null;
+  const existing = game.actors.getName(name);
+  if (existing) { await existing.setFlag(MODULE_ID, "isPJ", true); return existing; }
+  if (PKG_TYPE === "system") {
+    return Actor.create({ name, type: "pj", flags: { [MODULE_ID]: { isPJ: true } } });
+  }
+  await setCharacters([...legacyCharacters(), name]);
+  return null;
 }
 export async function setCharacters(list) {
   const clean = [...new Set(list.map((x) => String(x).replace(/,/g, " ").trim()).filter(Boolean))];
@@ -37,6 +57,10 @@ export async function setCharacters(list) {
 /* Réglages                                                            */
 /* ------------------------------------------------------------------ */
 Hooks.once("init", () => {
+  if (PKG_TYPE === "system") {
+    const Actors = foundry.documents?.collections?.Actors ?? globalThis.Actors;
+    Actors.registerSheet(MODULE_ID, CasinoActorSheet, { types: ["pj"], makeDefault: true, label: "Fiche PJ du Casino" });
+  }
   const reg = (key, data) => game.settings.register(MODULE_ID, key, data);
   reg("characters", {
     name: "Personnages (noms Roll20)",
@@ -85,6 +109,12 @@ Hooks.once("init", () => {
   reg("panelState", { scope: "client", config: false, type: Object, default: {} });
 });
 
+// libellés des types de documents (sinon Foundry affiche « TYPES.Actor.pj »)
+Hooks.once("i18nInit", () => {
+  if (PKG_TYPE !== "system") return;
+  foundry.utils.mergeObject(game.i18n.translations, { TYPES: { Actor: { pj: "PJ" }, Item: { objet: "Objet" } } });
+});
+
 /* ------------------------------------------------------------------ */
 /* Bouton « Casino » dans l'onglet Acteurs, sous Créer un acteur / dossier */
 /* ------------------------------------------------------------------ */
@@ -107,6 +137,14 @@ function addDirectoryButton(app, html) {
   else (root.querySelector(".directory-header") ?? root).prepend(btn);
 }
 Hooks.on("renderActorDirectory", addDirectoryButton);
+
+// la liste des PJ suit les fiches
+for (const h of ["createActor", "updateActor", "deleteActor"]) {
+  Hooks.on(h, () => {
+    board?.render(setting("session"));
+    if (CasinoApp.instance?.rendered) CasinoApp.instance.render();
+  });
+}
 
 /* ------------------------------------------------------------------ */
 /* Prêt : overlay, tableau, socket, API                                 */
@@ -149,14 +187,23 @@ Hooks.once("ready", () => {
 
   const api = {
     open: () => CasinoApp.open(), createSession, endSession, showBoard: () => { board.show(); game.socket.emit(SOCKET, { action: "show-board" }); },
-    spin, replay, exportToRoll20, listSources, roll20Command, getCharacters, setCharacters, overlay, board
+    spin, replay, exportToRoll20, listSources, roll20Command, getCharacters, setCharacters, createPJ, pjActors, overlay, board
   };
   if (PKG_TYPE === "system") game.system.api = api;
   else game.modules.get(MODULE_ID).api = api;
   globalThis.CasinoDnD = api;
-  if (PKG_TYPE === "system" && isLeadGM()) ensureCasinoScene();
+  if (PKG_TYPE === "system" && isLeadGM()) { ensureCasinoScene(); migrateLegacyCharacters(); }
   console.log("Casino DnD | prêt 🎰");
 });
+
+/** Les noms saisis à la main avant les fiches deviennent des fiches PJ. */
+async function migrateLegacyCharacters() {
+  const names = legacyCharacters();
+  if (!names.length) return;
+  for (const n of names) await createPJ(n);
+  await game.settings.set(MODULE_ID, "characters", "");
+  ui.notifications.info(`Casino : ${names.length} PJ convertis en fiches de personnage (${names.join(", ")}).`);
+}
 
 /** Monde dédié (système Casino) : une scène « Le Casino » sur le marbre, si le monde n'en a aucune. */
 async function ensureCasinoScene() {
@@ -295,10 +342,19 @@ async function gmOpen(sessionId, index, userId) {
 
 async function gmAssign(sessionId, index, to) {
   const st = clone(setting("session"));
-  if (!st?.active || st.id !== sessionId || !st.chests[index]?.opened) return;
-  st.chests[index].to = to || "";
+  const chest = st?.chests?.[index];
+  if (!st?.active || st.id !== sessionId || !chest?.opened) return;
+  const prev = chest.to || "";
+  chest.to = to || "";
   await game.settings.set(MODULE_ID, "session", st);
   await recordSession(st);
+  // historique dans la fiche du personnage
+  const entry = {
+    id: `${st.id}:${index}`, date: Date.now(), source: st.source, chest: index + 1, openedBy: chest.openedBy || "",
+    item: { ...exportableItem(chest.item), rarity: chest.item.rarity, ...(chest.item.img ? { img: chest.item.img } : {}) }
+  };
+  try { await moveHistoryEntry(entry, prev, chest.to); }
+  catch (e) { console.warn("Casino | historique de fiche non mis à jour", e); }
 }
 
 /** Une entrée d'historique par session, mise à jour à chaque coffre ouvert / attribué. */

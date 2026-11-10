@@ -357,7 +357,7 @@
 .cdnd-panel .cdnd-warn-txt { font-size: 12px; background: rgba(211, 155, 18, .15); border-left: 3px solid #d39b12; padding: 6px 8px; margin: 0; }
 .cdnd-panel .cdnd-pj-list { display: flex; flex-direction: column; gap: 4px; }
 .cdnd-panel .cdnd-pj { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; border: 1px solid var(--color-border-light-tertiary, #999); border-radius: 6px; }
-.cdnd-panel .cdnd-pj button { flex: 0 0 auto; width: 28px; padding: 0; }
+.casino-dnd-app .cdnd-panel .cdnd-pj button { flex: 0 0 auto; width: 28px; padding: 0; }
 .cdnd-panel .cdnd-add { flex: 0 0 auto !important; width: auto; white-space: nowrap; }
 
 /* ==================================================================
@@ -542,3 +542,28 @@ body.cdnd-playing .cdnd-board { visibility: hidden; }
 .cdnd-panel .m-gem .cdnd-chest-dot { background: linear-gradient(135deg, #b8fbff, #9b6bff, #ff6fd8); }
 .cdnd-panel .cdnd-count-val { font-weight: 700; text-align: center; font-size: 16px; }
 .cdnd-panel .cdnd-chest-total { text-align: right; font-size: 13px; }
+/* liste des PJ (fiches) dans le panneau */
+.cdnd-panel .cdnd-pj-open { display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1; }
+.cdnd-panel .cdnd-pj-open img { width: 26px; height: 26px; border: 0; border-radius: 4px; object-fit: cover; }
+.cdnd-panel .cdnd-pj-open small { opacity: .7; }
+.cdnd-slot-ok { font-size: 10.5px; color: #8fe0b0; text-align: center; }
+
+/* fiche de PJ du Casino */
+.casino-actor-sheet .window-content { padding: 0; overflow-y: auto; }
+.cdnd-actor-head { display: flex; gap: 12px; padding: 12px 14px; align-items: flex-start; }
+.cdnd-actor-img { width: 84px; height: 84px; object-fit: cover; border-radius: 8px; border: 2px solid #d39b12; flex: 0 0 84px; }
+.cdnd-actor-id { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.cdnd-actor-name { font-size: 20px; font-weight: 700; height: auto; padding: 4px 6px; }
+.cdnd-actor-pj { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.cdnd-actor-pj small { font-weight: 400; opacity: .7; }
+.cdnd-actor-hint { margin: 0; font-size: 12px; opacity: .75; }
+.cdnd-actor .cdnd-h { margin: 0; padding: 8px 14px 6px; font-size: 16px; border-bottom: 2px solid #d39b12; background: rgba(211, 155, 18, .12); }
+.cdnd-actor-history { padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; }
+.cdnd-ah-item { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px; border-left: 5px solid var(--rc); background: color-mix(in srgb, var(--rc) 12%, transparent); }
+.cdnd-ah-icon { width: 40px; height: 40px; flex: 0 0 40px; border: 0; object-fit: contain; display: flex; align-items: center; justify-content: center; font-size: 26px; }
+.cdnd-ah-txt { flex: 1; min-width: 0; }
+.cdnd-ah-name { font-weight: 700; }
+.cdnd-ah-meta { font-size: 11.5px; opacity: .8; }
+.cdnd-ah-rar { color: var(--rc); font-weight: 700; }
+.casino-actor-sheet .cdnd-ah-item button { flex: 0 0 auto; width: auto; min-width: 0; padding: 2px 8px; line-height: 20px; }
+.cdnd-actor-foot { padding: 6px 12px 12px; }
