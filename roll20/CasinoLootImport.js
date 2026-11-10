@@ -20,12 +20,12 @@
  * fiches, utilise --nosheet ou « !loot --config sheet off » : le handout et la
  * carte de chat fonctionnent partout.
  * ===================================================================== */
-/* global on, sendChat, findObjs, getObj, createObj, playerIsGM, state, log, _ */
+/* global on, sendChat, findObjs, getObj, createObj, playerIsGM, state, log, _, Campaign, getSheetItem, setSheetItem */
 
 var CasinoLoot = CasinoLoot || (function () {
   "use strict";
 
-  var VERSION = "1.1.0";
+  var VERSION = "1.2.0";
   var PREFIX = "CDND1.";
   var INBOX = "Casino Inbox";
 
@@ -143,6 +143,73 @@ var CasinoLoot = CasinoLoot || (function () {
     }
     for (i = 0; i < 12; i++) head += ROWCHARS.charAt(lastRand[i]);
     return head;
+  }
+
+  /* ---------- Fiche D&D 2024 (Beacon) ---------- */
+
+  function campaignGet(k) { try { return Campaign().get(k); } catch (e) { return undefined; } }
+
+  /** "2014" (fiche D&D 5E by Roll20) ou "2024" (fiche Beacon). Forçable : !loot --config mode 2014|2024|auto */
+  function sheetKind(character) {
+    var mode = cfg().mode || "auto";
+    if (mode === "2014" || mode === "2024") return mode;
+    var name = String(character.get("charactersheetname") || campaignGet("sheetName") || campaignGet("charactersheetname") || "");
+    return /2024|beacon|5\.5/i.test(name) ? "2024" : "2014";
+  }
+
+  var COIN_KEYS = { po: "gp", gp: "gp", pa: "sp", sp: "sp", pc: "cp", cp: "cp", pp: "pp", pe: "ep", ep: "ep" };
+
+  /** Pièces sur la fiche 2024 : getSheetItem / setSheetItem (bac à sable « Experimental »). */
+  function addCoins2024(character, it, done) {
+    var key = COIN_KEYS[String(it.currency || "").toLowerCase()];
+    if (!key) return false;
+    if (typeof getSheetItem !== "function" || typeof setSheetItem !== "function") {
+      whisperGM("<b>Casino :</b> fiche 2024 détectée, mais le bac à sable Mod n'est pas en <b>Experimental</b> : impossible d'ajouter les pièces. (Paramètres → Mod (API) Scripts → Sandbox → Experimental)");
+      return false;
+    }
+    var amount = Number(it.quantity) || 0;
+    Promise.resolve(getSheetItem(character.id, key)).then(function (cur) {
+      var next = (parseInt(cur, 10) || 0) + amount;
+      return Promise.resolve(setSheetItem(character.id, key, next)).then(function () {
+        if (done) done(null, key, next);
+      });
+    }).catch(function (e) {
+      log("CasinoLoot 2024 coins error: " + e);
+      whisperGM("<b>Casino :</b> erreur en ajoutant les pièces sur la fiche 2024 (" + esc(e && e.message || e) + ").");
+    });
+    return true;
+  }
+
+  /** !loot --diag : ce que la fiche 2024 expose aux scripts (pour trouver comment ajouter un objet). */
+  function diag(msg, opts) {
+    var ch = opts.to ? findCharacter(opts.to) : selectedCharacter(msg);
+    var pick = function (v) {
+      var txt = typeof v === "string" ? v : JSON.stringify(v || "");
+      var words = txt.match(/[A-Za-z_][\w.\-]{2,}/g) || [];
+      var seen = {}, out = [];
+      words.forEach(function (w) {
+        if (!seen[w] && /item|inventor|equip|gear|currenc|coin|gold|^gp$|^sp$|^cp$|^pp$|^ep$|loot|bag|container/i.test(w)) { seen[w] = 1; out.push(w); }
+      });
+      return out;
+    };
+    var cs = campaignGet("computedSummary"), as = campaignGet("actionSummary");
+    log("CasinoLoot DIAG computedSummary: " + JSON.stringify(cs));
+    log("CasinoLoot DIAG actionSummary: " + JSON.stringify(as));
+    var lines = [
+      "sandboxVersion : <b>" + esc(campaignGet("sandboxVersion") || "1.0 ?") + "</b>",
+      "sheetName (partie) : " + esc(campaignGet("sheetName") || "?"),
+      ch ? "fiche de « " + esc(ch.get("name")) + " » : " + esc(ch.get("charactersheetname") || "?") + " → mode " + sheetKind(ch) : "(sélectionne un jeton ou ajoute --to \"Nom\" pour tester une fiche)",
+      "getSheetItem : " + typeof getSheetItem + " · setSheetItem : " + typeof setSheetItem,
+      "computed liés aux objets : " + esc(pick(cs).slice(0, 40).join(", ") || "aucun / indisponible"),
+      "actions liées aux objets : " + esc(pick(as).slice(0, 40).join(", ") || "aucune / indisponible")
+    ];
+    whisperGM('<div style="border:1px solid #c9a227;border-radius:8px;padding:6px;background:#fffaf0;font-size:11px"><b>🎰 Casino — diagnostic</b><br>' +
+      lines.join("<br>") + "<br><i>La liste complète est dans la console Mod (API).</i></div>");
+    if (ch && sheetKind(ch) === "2024" && typeof getSheetItem === "function") {
+      ["gp", "sp", "cp", "pp", "ep"].forEach(function (k) {
+        Promise.resolve(getSheetItem(ch.id, k)).then(function (v) { log("CasinoLoot DIAG " + k + " = " + JSON.stringify(v)); });
+      });
+    }
   }
 
   /** Pièces : on les ajoute à la bourse de la fiche (attributs pp/gp/ep/sp/cp). */
@@ -350,16 +417,26 @@ var CasinoLoot = CasinoLoot || (function () {
     if (character) whoLabel = character.get("name");
 
     var sheet = c.sheet && !opts.nosheet && character;
+    var kind = sheet ? sheetKind(character) : null;
     var handouts = c.handout && !opts.nohandout;
+    var notOnSheet = [];
     items.forEach(function (it) {
       it.rarity = rarityKey(it.rarity);
       if (!TYPES[it.type]) it.type = "gear";
       var coins = false;
       if (sheet) {
-        try { coins = addCoins(character, it); if (!coins) addToSheet(character, it); }
-        catch (e) { log("CasinoLoot sheet error: " + e); }
+        try {
+          if (kind === "2024") {
+            coins = addCoins2024(character, it);
+            if (!coins) notOnSheet.push(it);   // pas d'ajout d'objet possible sur la fiche 2024
+          } else {
+            coins = addCoins(character, it);
+            if (!coins) addToSheet(character, it);
+          }
+        } catch (e) { log("CasinoLoot sheet error: " + e); }
       }
-      if (handouts && !coins && !it.currency) createHandout(it, character);
+      // fiche 2024 : le handout est la trace de l'objet, on le crée même si les handouts sont désactivés
+      if ((handouts || (kind === "2024" && !coins)) && !coins && !it.currency) createHandout(it, character);
     });
 
     if (opts.quiet) {
@@ -367,7 +444,14 @@ var CasinoLoot = CasinoLoot || (function () {
     } else {
       sendChat("Casino", "/direct " + chatCard(items, whoLabel));
     }
-    if (sheet || handouts) {
+    if (kind === "2024") {
+      whisperGM('<div style="font-size:11px">✔ <b>' + esc(whoLabel) + "</b> (fiche D&amp;D 2024) : " +
+        (items.length - notOnSheet.length ? (items.length - notOnSheet.length) + " lot(s) de pièces ajouté(s) à la bourse. " : "") +
+        (notOnSheet.length ? "<br>⚠ Roll20 ne permet pas encore aux scripts d'ajouter un objet à l'inventaire de la fiche 2024 : " +
+          notOnSheet.map(function (i) { return "<b>" + esc(i.name) + "</b>"; }).join(", ") +
+          " → handout créé ; ajoute-le à la main (onglet Inventory) ou glisse-le depuis le compendium. " +
+          "<code>!loot --diag</code> (jeton sélectionné) pour me montrer ce que ta fiche expose." : "") + "</div>");
+    } else if (sheet || handouts) {
       whisperGM('<div style="font-size:11px">✔ ' + items.length + " objet(s) pour <b>" + esc(whoLabel) + "</b>" +
         (sheet ? " — ajouté(s) à l'inventaire" : "") + (handouts ? " — handout(s) créé(s)" : "") + "</div>");
     }
@@ -397,6 +481,8 @@ var CasinoLoot = CasinoLoot || (function () {
         opts.config = true;
         var cm = /^(\w+)\s+(on|off)$/i.exec(val);
         if (cm) { opts.configKey = cm[1].toLowerCase(); opts.configVal = cm[2].toLowerCase() === "on"; }
+        var mm = /^mode\s+(2014|2024|auto)$/i.exec(val);
+        if (mm) opts.configMode = mm[1].toLowerCase();
       } else opts[key] = true;
     });
     if (opts.groupe || opts.group) opts.party = true;
@@ -410,7 +496,8 @@ var CasinoLoot = CasinoLoot || (function () {
       "<code>!loot {\"name\":\"…\",\"rarity\":\"rare\"}</code> marche aussi avec du JSON.<br>" +
       "Options : <code>--to \"Nom\"</code>, <code>--groupe</code>, <code>--nosheet</code>, <code>--nohandout</code>, <code>--quiet</code><br>" +
       "<code>!loot --inbox</code> lit les codes collés dans le handout « " + INBOX + " » (pour les gros butins).<br>" +
-      "<code>!loot --config sheet on|off</code> · <code>handout on|off</code> · <code>players on|off</code></div>");
+      "<code>!loot --config sheet on|off</code> · <code>handout on|off</code> · <code>players on|off</code> · <code>mode auto|2014|2024</code><br>" +
+      "<code>!loot --diag</code> (jeton sélectionné) : ce que la fiche expose aux scripts.</div>");
   }
 
   function showConfig(who) {
@@ -420,7 +507,8 @@ var CasinoLoot = CasinoLoot || (function () {
       "<b>🎰 Réglages Casino</b><br>" +
       "Ajouter à la fiche 5e : " + b("sheet", c.sheet) + "<br>" +
       "Créer un handout : " + b("handout", c.handout) + "<br>" +
-      "Les joueurs peuvent importer : " + b("players", c.players) + "</div>");
+      "Les joueurs peuvent importer : " + b("players", c.players) + "<br>" +
+      "Type de fiche : <b>" + esc(c.mode || "auto") + "</b> (<a href=\"!loot --config mode auto\">auto</a> · <a href=\"!loot --config mode 2014\">2014</a> · <a href=\"!loot --config mode 2024\">2024</a>)</div>");
   }
 
   function readInbox(cb) {
@@ -468,9 +556,11 @@ var CasinoLoot = CasinoLoot || (function () {
     var opts = parseArgs(msg.content);
 
     if (opts.help) return showHelp(msg.who);
+    if (opts.diag) { if (gm) diag(msg, opts); return; }
     if (opts.config) {
       if (!gm) return;
-      if (opts.configKey && c[opts.configKey] !== undefined) c[opts.configKey] = opts.configVal;
+      if (opts.configMode) c.mode = opts.configMode;
+      else if (opts.configKey && c[opts.configKey] !== undefined) c[opts.configKey] = opts.configVal;
       return showConfig(msg.who);
     }
     if (opts.inbox) {

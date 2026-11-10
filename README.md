@@ -152,7 +152,7 @@ Le script accepte aussi du **JSON brut**, pratique pour un objet généré aille
 !loot {"name":"Bague qui chuchote","rarity":"rare","type":"ring","description":"Elle connaît ton nom."} --to Elara
 ```
 
-> **Fiche 2024** : la fiche « D&D 2024 by Roll20 » ne se remplit pas par attributs. Dans ce cas, lance `!loot --config sheet off`. La carte de chat et le handout fonctionnent quand même, et le joueur ajoute l'objet à la main.
+> **Fiche D&D 2024** : le script la détecte (ou `!loot --config mode 2024`). Les **pièces** sont ajoutées à la bourse, à condition de régler *Paramètres → Mod (API) Scripts → Sandbox* sur **Experimental**. Roll20 ne permet pas encore aux scripts d'ajouter un **objet** à l'inventaire de cette fiche : le script crée un handout et poste la carte dans le chat, et l'objet s'ajoute à la main. `!loot --diag`, jeton sélectionné, affiche ce que la fiche expose aux scripts.
 
 ## 4. L'écran de connexion
 
