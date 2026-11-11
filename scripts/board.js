@@ -2,7 +2,8 @@
  * Casino DnD — tableau de session : les coffres proposés, visibles par tous.
  * Pur DOM (aucune dépendance Foundry) : la logique réseau est fournie par callbacks.
  */
-import { rarityInfo, roll20Command, roll20CommandMulti, RARITY_INDEX, itemIcon } from "./engine.js";
+import { rarityInfo, RARITY_INDEX, itemIcon } from "./engine.js";
+// ROLL20 : import { roll20Command, roll20CommandMulti } from "./engine.js";
 import { chestBaseSVG, chestLidSVG, chestInsideSVG, CHEST_TIERS } from "./chest.js";
 import { displayName, typeLine, statLine } from "./overlay.js";
 import { Presenter, LINES } from "./presenter.js";
@@ -22,11 +23,10 @@ export class SessionBoard {
    * @param {object} o
    * @param {boolean} o.isGM
    * @param {(i:number)=>void} o.onOpen          clic sur un coffre fermé
-   * @param {(i:number,to:string)=>void} o.onAssign  choix du PJ d'un coffre ouvert
-   * @param {(text:string)=>void} o.onCopy
+   * @param {(i:number,actorId:string)=>void} o.onGive  « Donner » (actorId vide = reprendre)
    * @param {()=>void} [o.onEnd]                 MJ : terminer la session
-   * @param {()=>string[]} o.getCharacters
-   * @param {()=>boolean} [o.showCode]           les joueurs voient-ils le code ?
+   * @param {()=>{id:string,name:string}[]} o.getPjs
+   * @param {()=>boolean} [o.canGive]            ce joueur peut-il distribuer ?
    */
   constructor(o) {
     this.o = o;
@@ -83,12 +83,17 @@ export class SessionBoard {
 
     if (this.o.isGM) {
       const foot = el("footer", "cdnd-board-foot");
+      /* ROLL20 (en commentaire)
       const assigned = state.chests.filter((c) => c.opened && c.to);
       if (assigned.length) {
         const all = el("button", "cdnd-btn cdnd-gold", "📋 Copier toutes les commandes Roll20");
         all.addEventListener("click", () => this.o.onCopy(roll20CommandMulti(assigned.map((c) => ({ item: c.item, to: c.to })))));
         foot.append(all);
       }
+      */
+      const given = state.chests.filter((c) => c.given).length;
+      const openedN = state.chests.filter((c) => c.opened).length;
+      if (openedN) foot.append(el("span", "cdnd-board-count", `🎁 ${given}/${openedN} objet${openedN > 1 ? "s" : ""} donné${given > 1 ? "s" : ""}`));
       if (this.o.onEnd) {
         const end = el("button", "cdnd-btn cdnd-ghost", "Terminer la session");
         end.addEventListener("click", () => this.o.onEnd());
@@ -156,18 +161,38 @@ export class SessionBoard {
     slot.append(el("div", "cdnd-slot-rarity", `${r.label} · ${typeLine(item)}`));
     if (c.openedBy) slot.append(el("div", "cdnd-slot-by", `Coffre n°${i + 1} · ouvert par ${c.openedBy}`));
 
-    const sel = el("select", "cdnd-slot-select");
-    sel.append(new Option("— Pour quel PJ ? —", ""));
-    const chars = this.o.getCharacters();
-    for (const n of chars) sel.append(new Option(n, n));
-    if (c.to && !chars.includes(c.to)) sel.append(new Option(c.to, c.to));
-    sel.value = c.to || "";
-    sel.addEventListener("change", () => this.o.onAssign(i, sel.value));
-    slot.append(sel);
+    if (c.given) {
+      slot.append(el("div", "cdnd-slot-ok", `🎁 Dans la fiche de ${c.to}`));
+      if (this.o.isGM) {
+        const back = el("button", "cdnd-btn cdnd-small cdnd-ghost", "↩ Reprendre");
+        back.title = `Retirer l'objet de la fiche de ${c.to} pour le donner à quelqu'un d'autre`;
+        back.addEventListener("click", () => { back.disabled = true; this.o.onGive(i, ""); });
+        slot.append(back);
+      }
+    } else if (this.o.canGive?.() ?? this.o.isGM) {
+      const row = el("div", "cdnd-slot-give");
+      const sel = el("select", "cdnd-slot-select");
+      sel.append(new Option("— Pour quel PJ ? —", ""));
+      for (const p of this.o.getPjs()) sel.append(new Option(p.name, p.id));
+      const btn = el("button", "cdnd-btn cdnd-small cdnd-gold", "🎁 Donner");
+      btn.disabled = true;
+      sel.addEventListener("change", () => { btn.disabled = !sel.value; });
+      btn.addEventListener("click", () => {
+        if (!sel.value) return;
+        btn.disabled = true; sel.disabled = true;
+        btn.textContent = "…";
+        this.o.onGive(i, sel.value);
+      });
+      row.append(sel, btn);
+      slot.append(row);
+      if (!this.o.getPjs().length) slot.append(el("div", "cdnd-slot-warn", "Aucun PJ : coche « PJ » sur les fiches de personnage."));
+    } else {
+      slot.append(el("div", "cdnd-slot-warn", "En attente du MJ pour la distribution."));
+    }
 
+    /* ROLL20 (en commentaire) — commande d'import sous le coffre
     if (this.o.isGM || this.o.showCode?.()) {
       if (c.to) {
-        // la commande n'existe qu'une fois le PJ choisi : elle importe directement sur sa fiche Roll20
         const cmd = roll20Command([item], c.to);
         const code = el("div", "cdnd-slot-code");
         const input = el("input");
@@ -184,6 +209,7 @@ export class SessionBoard {
         slot.append(el("div", "cdnd-slot-warn", "Choisis un PJ pour générer la commande Roll20."));
       }
     }
+    */
     return slot;
   }
 }

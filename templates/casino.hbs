@@ -64,7 +64,7 @@
 
   <h3 class="cdnd-h">👥 PJ ({{pjCount}})</h3>
   <section>
-    <p class="cdnd-poolinfo">Les fiches cochées « PJ du Casino » (onglet Acteurs) apparaissent ici et dans le menu sous chaque coffre. Leur nom doit être <b>exactement</b> celui du personnage sur Roll20.</p>
+    <p class="cdnd-poolinfo">Les fiches cochées « PJ du Casino » (onglet Acteurs) apparaissent ici et dans le menu sous chaque coffre. Le bouton « 🎁 Donner » sous un coffre ouvert met l'objet directement dans leur fiche.</p>
     <div class="cdnd-pj-list">
       {{#each pjs}}
       <div class="cdnd-pj">
@@ -82,7 +82,7 @@
       {{/each}}
     </div>
     <div class="cdnd-row">
-      <input type="text" data-pj-input placeholder="Nom du personnage sur Roll20 (ex : Thorin Écu-de-Chêne)">
+      <input type="text" data-pj-input placeholder="Nom du personnage (ex : Thorin Écu-de-Chêne)">
       <button type="button" class="cdnd-add" data-action="addPj"><i class="fa-solid fa-plus"></i> Créer le PJ</button>
     </div>
   </section>
@@ -97,12 +97,12 @@
         <span class="cdnd-dot" title="{{rarityLabel}}"></span>
         <span class="name">{{name}}</span>
         <span class="cdnd-to">→ {{to}}</span>
-        <button type="button" data-action="copyItem" data-idx="{{idx}}" title="Copier la commande Roll20 pour cet objet">📋</button>
+        {{!-- ROLL20 : <button type="button" data-action="copyItem" data-idx="{{idx}}" title="Copier la commande Roll20 pour cet objet">📋</button> --}}
       </div>
       {{/each}}
       <div class="cdnd-h-actions">
         <button type="button" data-action="replay">🔁 Rejouer l'animation</button>
-        <button type="button" data-action="copyEntry">📋 Tout copier (Roll20)</button>
+        {{!-- ROLL20 : <button type="button" data-action="copyEntry">📋 Tout copier (Roll20)</button> --}}
       </div>
     </div>
     {{else}}

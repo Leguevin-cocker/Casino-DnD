@@ -177,10 +177,22 @@ python3 -m http.server   # à la racine du dépôt
 
 Deux fichiers sont lus s'ils existent, mais **ne sont pas dans le dépôt** (ressources personnelles, voir `.gitignore`) :
 - `assets/presenter.png` : l'image du présentateur, détourée sur fond transparent. Elle apparaît pendant les animations et à côté du tableau des coffres, avec ses répliques. Le réglage *Afficher le présentateur* permet de le masquer.
-- `data/extra-pools.json` : des pools en plus, au même format que `data/pools.json`. Ils apparaissent dans la liste des sources.
+- `data/extra-pools.json` : les objets du PDF Mythical Ink (776 objets, en français, triés par rareté), inclus dans le paquet.
 
 ## Notes
 
 - Les sons sont générés à la volée (WebAudio) : aucun fichier audio à fournir.
 - Si ton Foundry tourne en `http://` sur une IP, le navigateur bloque parfois la copie automatique. Une fenêtre s'ouvre alors avec la commande sélectionnée : il suffit de faire Ctrl+C.
 - Les descriptions des objets fournis sont des textes maison inspirés du SRD 5.1 (CC-BY-4.0).
+
+
+## Distribution du butin (v1.0.7)
+
+Sous chaque coffre ouvert : choisir le PJ puis **🎁 Donner**. L'objet est créé dans la fiche Foundry du personnage :
+
+- **Monde D&D 5e** (module `casino-dnd`) : l'objet officiel est copié depuis les compendiums (2024, puis SRD 2014, puis ceux du monde) grâce à son nom anglais, avec ses dégâts, sa CA, ses propriétés et ses activités ; le nom, la description française et la rareté du Casino sont appliqués. S'il n'existe dans aucun compendium, il est construit au format dnd5e (arme, armure, équipement, consommable, outil, butin).
+- **Monde Casino** (système `casino`) : l'objet arrive dans l'inventaire de la fiche PJ.
+
+Le MJ peut **↩ Reprendre** un objet donné (il est retiré de la fiche). Réglage « Les joueurs peuvent donner les objets » pour laisser les joueurs distribuer.
+
+L'export Roll20 est en commentaire dans le code (chercher `ROLL20`).

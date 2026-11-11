@@ -627,23 +627,27 @@ export class LootOverlay {
       txt.append(desc);
       row.append(txt);
       row.addEventListener("click", (ev) => { if (!ev.target.closest("button")) row.classList.toggle("is-open"); });
+      /* ROLL20 (en commentaire)
       if (this.opts.isGM && this.opts.onExport) {
         const b = el("button", "cdnd-btn cdnd-small", "📋 Roll20");
         b.title = "Copier la commande d'import Roll20 pour cet objet";
         b.addEventListener("click", () => this.opts.onExport([item], payload));
         row.append(b);
       }
+      */
       list.append(row);
     });
     box.append(list);
     this.$content.replaceChildren(box);
 
     this.$foot.replaceChildren();
+    /* ROLL20 (en commentaire)
     if (this.opts.isGM && this.opts.onExport && items.length) {
       const all = el("button", "cdnd-btn cdnd-gold", "📋 Tout copier pour Roll20");
       all.addEventListener("click", () => this.opts.onExport(items, payload));
       this.$foot.append(all);
     }
+    */
     if (this.opts.isGM && this.opts.onCloseAll) {
       const ca = el("button", "cdnd-btn", "Fermer pour tous");
       ca.addEventListener("click", () => { this.opts.onCloseAll(); this.close(); });

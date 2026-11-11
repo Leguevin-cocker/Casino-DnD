@@ -2,8 +2,10 @@
  * Casino DnD — panneau du MJ (ApplicationV2, Foundry v12+).
  * Onglets : Session (créer / suivre) · PJ (liste des personnages) · Historique.
  */
-import { RARITIES, rarityInfo, validatePool, normRarity, roll20CommandMulti } from "./engine.js";
-import { displayName, copyText, showCopyBox } from "./overlay.js";
+import { RARITIES, rarityInfo, validatePool, normRarity } from "./engine.js";
+import { displayName } from "./overlay.js";
+// ROLL20 : import { roll20CommandMulti } from "./engine.js";
+// ROLL20 : import { copyText, showCopyBox } from "./overlay.js";
 import { MODULE_ID, PKG_PATH, listSources, loadPool, saveCustomPool, deleteCustomPool } from "./sources.js";
 import { createSession, endSession, replay, getCharacters, setCharacters, createPJ, pjActors, legacyCharacters } from "./main.js";
 import { pjHistory } from "./actor-sheet.js";
@@ -20,10 +22,12 @@ const CHEST_ROWS = [
 
 const LUCK_LABELS = { "-3": "😭", "-2": "😟", "-1": "😕", "0": "🙂", "1": "😊", "2": "😄", "3": "🤩", "4": "🍀", "5": "👑" };
 
+/* ROLL20 (en commentaire)
 async function copy(text) {
   if (await copyText(text)) ui.notifications.info("Commande Roll20 copiée. Colle-la dans le chat Roll20 !");
   else showCopyBox(text);
 }
+*/
 
 export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static instance = null;
@@ -51,8 +55,8 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
       importPool: CasinoApp._onImportPool,
       exportPool: CasinoApp._onExportPool,
       deletePool: CasinoApp._onDeletePool,
-      copyEntry: CasinoApp._onCopyEntry,
-      copyItem: CasinoApp._onCopyItem,
+      // ROLL20 : copyEntry: CasinoApp._onCopyEntry,
+      // ROLL20 : copyItem: CasinoApp._onCopyItem,
       replay: CasinoApp._onReplay,
       clearHistory: CasinoApp._onClearHistory
     }
@@ -121,7 +125,7 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
       noPj: !pjs.length,
       sessionActive: !!session.active,
       sessionInfo: session.active ? `${session.source} · ${opened.length}/${session.chests.length} coffres ouverts` : "",
-      sessionItems: opened.map((c) => ({ name: displayName(c.item), rarity: normRarity(c.item.rarity), to: c.to || "pas encore attribué" })),
+      sessionItems: opened.map((c) => ({ name: displayName(c.item), rarity: normRarity(c.item.rarity), to: c.to || "pas encore donné" })),
       sources: sources.map((x) => ({ value: x.id, label: x.name, selected: x.id === s.sourceId })),
       isCustom: s.sourceId?.startsWith("custom:"),
       poolInfo,
@@ -267,7 +271,7 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
     });
     if (!ok) return;
     await deleteCustomPool(id);
-    this.casino.sourceId = "builtin:tresor-donjon";
+    this.casino.sourceId = "builtin:mythical-ink";
     this.render();
   }
 
@@ -276,6 +280,7 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
     return (game.settings.get(MODULE_ID, "history")?.entries ?? []).find((e) => e.id === id);
   }
 
+  /* ROLL20 (en commentaire)
   static _onCopyEntry(event, target) {
     const e = CasinoApp._entry(target);
     if (e) copy(roll20CommandMulti(e.items.map((it) => ({ item: it, to: it.to }))));
@@ -286,6 +291,7 @@ export class CasinoApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const it = e?.items[Number(target.dataset.idx)];
     if (it) copy(roll20CommandMulti([{ item: it, to: it.to }]));
   }
+  */
 
   static _onReplay(event, target) {
     const e = CasinoApp._entry(target);

@@ -6,10 +6,16 @@
  *     dans le navigateur du MJ (les joueurs ne peuvent pas les lire en avance).
  *  2. Tout le monde voit le tableau des coffres fermés.
  *  3. Un clic sur un coffre -> le MJ (qui fait autorité) lance l'animation chez tous.
- *  4. Le coffre revient ouvert sur le tableau : objet, choix du PJ, commande Roll20.
+ *  4. Le coffre revient ouvert sur le tableau : objet, choix du PJ, bouton « Donner ».
+ *  5. « Donner » crée l'objet dans la fiche Foundry du PJ (objet D&D 5e complet dans un monde dnd5e).
+ *
+ * L'export Roll20 est en commentaire (rechercher « ROLL20 » pour le réactiver).
  */
-import { drawLoot, drawByRarity, CHEST_RARITIES, buildStrip, roll20Command, exportableItem, parseWeights, rarityInfo, typeInfo } from "./engine.js";
-import { LootOverlay, copyText, showCopyBox, displayName } from "./overlay.js";
+import { drawLoot, drawByRarity, CHEST_RARITIES, buildStrip, exportableItem, parseWeights, rarityInfo, typeInfo } from "./engine.js";
+// ROLL20 : import { roll20Command } from "./engine.js";
+// ROLL20 : import { copyText, showCopyBox } from "./overlay.js";
+import { LootOverlay, displayName } from "./overlay.js";
+import { giveItem, takeBackItem } from "./give.js";
 import { SessionBoard } from "./board.js";
 import { MODULE_ID, PKG_TYPE, PKG_PATH, SOCKET, loadPool, listSources } from "./sources.js";
 import { CasinoApp } from "./casino-app.js";
@@ -36,6 +42,21 @@ export function pjActors() {
 export function getCharacters() {
   return [...new Set([...pjActors().map((a) => a.name), ...legacyCharacters()])];
 }
+/** PJ proposés sous les coffres : [{ id, name }]. Les joueurs lisent la liste publiée par le MJ dans la session. */
+export function pjOptions() {
+  if (game.user.isGM) return pjActors().map((a) => ({ id: a.id, name: a.name }));
+  const st = setting("session");
+  if (Array.isArray(st?.pjs)) return st.pjs;
+  return pjActors().map((a) => ({ id: a.id, name: a.name }));
+}
+/** Le MJ qui tient la session republie la liste des PJ (les joueurs ne voient pas toutes les fiches). */
+async function syncSessionPjs() {
+  const st = setting("session");
+  if (!st?.active || !holdsSession(st.id)) return;
+  const pjs = pjOptions();
+  if (JSON.stringify(pjs) === JSON.stringify(st.pjs ?? [])) return;
+  await game.settings.set(MODULE_ID, "session", { ...clone(st), pjs });
+}
 /** Crée une fiche de PJ (système Casino) ou, à défaut, l'ajoute à la liste manuelle. */
 export async function createPJ(name) {
   name = String(name ?? "").trim();
@@ -44,6 +65,9 @@ export async function createPJ(name) {
   if (existing) { await existing.setFlag(MODULE_ID, "isPJ", true); return existing; }
   if (PKG_TYPE === "system") {
     return Actor.create({ name, type: "pj", flags: { [MODULE_ID]: { isPJ: true } } });
+  }
+  if (game.system.id === "dnd5e") {
+    return Actor.create({ name, type: "character", flags: { [MODULE_ID]: { isPJ: true } } });
   }
   await setCharacters([...legacyCharacters(), name]);
   return null;
@@ -63,9 +87,9 @@ Hooks.once("init", () => {
   }
   const reg = (key, data) => game.settings.register(MODULE_ID, key, data);
   reg("characters", {
-    name: "Personnages (noms Roll20)",
-    hint: "Se gère plus simplement dans le panneau du Casino, onglet « PJ ». Noms exacts des personnages sur Roll20, séparés par des virgules.",
-    scope: "world", config: true, type: String, default: "",
+    name: "Personnages (ancienne liste manuelle)",
+    hint: "Ancienne liste de noms séparés par des virgules. Les PJ sont maintenant les fiches de personnage cochées « PJ ».",
+    scope: "world", config: false, type: String, default: "",
     onChange: () => { board?.render(setting("session")); CasinoApp.instance?.rendered && CasinoApp.instance.render(); }
   });
   reg("title", {
@@ -76,10 +100,18 @@ Hooks.once("init", () => {
     hint: "Commun, Peu commun, Rare, Très rare, Légendaire, Artefact. Ex : 60,25,10,4,1,0. Un pool peut avoir ses propres poids.",
     scope: "world", config: true, type: String, default: "60,25,10,4,1,0"
   });
+  /* ROLL20 (en commentaire)
   reg("playersSeeCode", {
     name: "Les joueurs voient la commande Roll20",
     hint: "Par défaut, seul le MJ voit et copie la commande d'import sous chaque coffre ouvert.",
     scope: "world", config: true, type: Boolean, default: false,
+    onChange: () => board?.render(setting("session"))
+  });
+  */
+  reg("playersCanGive", {
+    name: "Les joueurs peuvent donner les objets",
+    hint: "Si coché, un joueur peut choisir le PJ et cliquer « Donner » sous un coffre ouvert. Sinon, seul le MJ distribue.",
+    scope: "world", config: true, type: Boolean, default: true,
     onChange: () => board?.render(setting("session"))
   });
   reg("presenter", {
@@ -143,6 +175,7 @@ for (const h of ["createActor", "updateActor", "deleteActor"]) {
   Hooks.on(h, () => {
     board?.render(setting("session"));
     if (CasinoApp.instance?.rendered) CasinoApp.instance.render();
+    syncSessionPjs();
   });
 }
 
@@ -155,21 +188,24 @@ Hooks.once("ready", () => {
     presenterSrc,
     volume: setting("volume"),
     isGM: game.user.isGM,
-    onExport: (items, payload) => exportToRoll20(items, payload?.recipient),
+    // ROLL20 : onExport: (items, payload) => exportToRoll20(items, payload?.recipient),
     onCloseAll: () => game.socket.emit(SOCKET, { action: "close" })
   });
 
   board = new SessionBoard({
     presenterSrc,
     isGM: game.user.isGM,
-    getCharacters,
-    showCode: () => setting("playersSeeCode"),
+    getPjs: pjOptions,
+    canGive: () => game.user.isGM || setting("playersCanGive"),
+    // ROLL20 : showCode: () => setting("playersSeeCode"),
     onOpen: (i) => requestOpen(i),
-    onAssign: (i, to) => requestAssign(i, to),
+    onGive: (i, actorId) => requestAssign(i, actorId),
+    /* ROLL20 (en commentaire)
     onCopy: async (text) => {
       if (await copyText(text)) ui.notifications.info("Commande Roll20 copiée. Colle-la dans le chat Roll20 !");
       else showCopyBox(text);
     },
+    */
     onEnd: game.user.isGM ? () => endSession() : null
   });
   board.render(setting("session"));
@@ -180,19 +216,21 @@ Hooks.once("ready", () => {
       case "close": overlay.close(); break;
       case "show-board": board.show(); break;
       case "open-request": if (holdsSession(msg.sessionId)) gmOpen(msg.sessionId, msg.index, msg.userId); break;
-      case "assign": if (holdsSession(msg.sessionId)) gmAssign(msg.sessionId, msg.index, msg.to); break;
+      case "assign": if (holdsSession(msg.sessionId)) gmAssign(msg.sessionId, msg.index, msg.actorId, msg.userId); break;
       case "denied": if (msg.userId === game.user.id) ui.notifications.warn(msg.reason); break;
     }
   });
 
   const api = {
     open: () => CasinoApp.open(), createSession, endSession, showBoard: () => { board.show(); game.socket.emit(SOCKET, { action: "show-board" }); },
-    spin, replay, exportToRoll20, listSources, roll20Command, getCharacters, setCharacters, createPJ, pjActors, overlay, board
+    spin, replay, listSources, getCharacters, setCharacters, createPJ, pjActors, pjOptions, giveItem, overlay, board
+    // ROLL20 : exportToRoll20, roll20Command
   };
   if (PKG_TYPE === "system") game.system.api = api;
   else game.modules.get(MODULE_ID).api = api;
   globalThis.CasinoDnD = api;
   if (PKG_TYPE === "system" && isLeadGM()) { ensureCasinoScene(); migrateLegacyCharacters(); }
+  if (game.user.isGM) syncSessionPjs();
   console.log("Casino DnD | prêt 🎰");
 });
 
@@ -237,7 +275,7 @@ async function ensureCasinoScene() {
  */
 export async function createSession(o = {}) {
   if (!game.user.isGM) return;
-  const pool = await loadPool(o.sourceId ?? "builtin:tresor-donjon");
+  const pool = await loadPool(o.sourceId ?? "builtin:mythical-ink");
   const mystery = !!o.mystery;
   let items;
   if (o.counts) {
@@ -261,6 +299,7 @@ export async function createSession(o = {}) {
   await game.settings.set(MODULE_ID, "sessionSecret", { id, items });
   await game.settings.set(MODULE_ID, "session", {
     active: true, id, ownerId: game.user.id, title: setting("title"), source: pool.name, createdAt: Date.now(), opening: null, mystery,
+    pjs: pjOptions(),
     chests: items.map((i) => ({ opened: false, tier: mystery ? 0 : Math.max(0, CHEST_RARITIES.indexOf(i.chestRarity)) }))
   });
   board.show();
@@ -287,11 +326,14 @@ function requestOpen(index) {
   game.socket.emit(SOCKET, { action: "open-request", sessionId: st.id, index, userId: game.user.id });
 }
 
-function requestAssign(index, to) {
+/** actorId vide = reprendre l'objet (annuler le don). */
+function requestAssign(index, actorId) {
   const st = setting("session");
   if (!st?.active) return;
-  if (holdsSession(st.id)) return gmAssign(st.id, index, to);
-  game.socket.emit(SOCKET, { action: "assign", sessionId: st.id, index, to });
+  if (holdsSession(st.id)) return gmAssign(st.id, index, actorId, game.user.id);
+  const owner = st.ownerId ? game.users.get(st.ownerId) : game.users.activeGM;
+  if (!owner?.active) return ui.notifications.warn(`${owner?.name ?? "Le MJ"} doit être connecté pour distribuer les objets.`);
+  game.socket.emit(SOCKET, { action: "assign", sessionId: st.id, index, actorId, userId: game.user.id });
 }
 
 async function gmOpen(sessionId, index, userId) {
@@ -340,21 +382,56 @@ async function gmOpen(sessionId, index, userId) {
   }
 }
 
-async function gmAssign(sessionId, index, to) {
+const giving = new Set();
+async function gmAssign(sessionId, index, actorId, userId) {
   const st = clone(setting("session"));
   const chest = st?.chests?.[index];
   if (!st?.active || st.id !== sessionId || !chest?.opened) return;
-  const prev = chest.to || "";
-  chest.to = to || "";
-  await game.settings.set(MODULE_ID, "session", st);
-  await recordSession(st);
-  // historique dans la fiche du personnage
-  const entry = {
-    id: `${st.id}:${index}`, date: Date.now(), source: st.source, chest: index + 1, openedBy: chest.openedBy || "",
-    item: { ...exportableItem(chest.item), rarity: chest.item.rarity, ...(chest.item.img ? { img: chest.item.img } : {}) }
+  const tell = (msg, level = "warn") => {
+    if (userId && userId !== game.user.id) game.socket.emit(SOCKET, { action: "denied", userId, reason: msg });
+    else ui.notifications[level](msg);
   };
-  try { await moveHistoryEntry(entry, prev, chest.to); }
-  catch (e) { console.warn("Casino | historique de fiche non mis à jour", e); }
+  const user = game.users.get(userId);
+  if (user && !user.isGM && !setting("playersCanGive")) return tell("Seul le MJ peut distribuer les objets.");
+  if (user && !user.isGM && chest.given && !actorId) return tell("Seul le MJ peut reprendre un objet déjà donné.");
+  const key = `${sessionId}:${index}`;
+  if (giving.has(key)) return;
+  giving.add(key);
+  try {
+    const actor = actorId ? game.actors.get(actorId) : null;
+    if (actorId && !actor) return tell("Ce personnage n'existe plus.");
+    const prev = chest.to || "";
+    // reprend l'objet chez l'ancien destinataire
+    if (chest.given?.uuid) await takeBackItem(chest.given.uuid);
+    chest.given = null;
+    chest.to = "";
+    chest.toId = "";
+    if (actor) {
+      const { item: created, fromCompendium } = await giveItem(actor, chest.item, { session: sessionId, chest: index + 1 });
+      chest.to = actor.name;
+      chest.toId = actor.id;
+      chest.given = { uuid: created?.uuid ?? "", fromCompendium: fromCompendium ?? "", by: user?.name ?? "" };
+      if (setting("postToChat")) postChat([chest.item], `${actor.name} reçoit`);
+      ui.notifications.info(`${displayName(chest.item)} → ${actor.name}${fromCompendium ? " (objet du compendium)" : ""}`);
+    }
+    const cur = clone(setting("session"));
+    if (!cur?.active || cur.id !== sessionId) return;
+    cur.chests[index] = chest;
+    await game.settings.set(MODULE_ID, "session", cur);
+    await recordSession(cur);
+    // historique dans la fiche du personnage
+    const entry = {
+      id: key, date: Date.now(), source: st.source, chest: index + 1, openedBy: chest.openedBy || "",
+      item: { ...exportableItem(chest.item), rarity: chest.item.rarity, ...(chest.item.img ? { img: chest.item.img } : {}) }
+    };
+    try { await moveHistoryEntry(entry, prev, chest.to); }
+    catch (e) { console.warn("Casino | historique de fiche non mis à jour", e); }
+  } catch (e) {
+    console.error("Casino | objet non donné", e);
+    tell(`Impossible de donner l'objet : ${e.message ?? e}`, "error");
+  } finally {
+    giving.delete(key);
+  }
 }
 
 /** Une entrée d'historique par session, mise à jour à chaque coffre ouvert / attribué. */
@@ -373,7 +450,7 @@ async function recordSession(st) {
 /* ------------------------------------------------------------------ */
 export async function spin(o = {}) {
   if (!game.user.isGM) return ui.notifications.warn("Seul le MJ peut faire tourner le Casino.");
-  const pool = await loadPool(o.sourceId ?? "builtin:tresor-donjon");
+  const pool = await loadPool(o.sourceId ?? "builtin:mythical-ink");
   const count = Math.max(1, Math.min(10, Number(o.count) || 1));
   const items = drawLoot(pool, {
     count, luck: Number(o.luck) || 0, minRarity: o.minRarity || "common", unique: !!o.unique,
@@ -422,9 +499,7 @@ function postChat(items, heading) {
   });
 }
 
-/* ------------------------------------------------------------------ */
-/* Export Roll20                                                        */
-/* ------------------------------------------------------------------ */
+/* ROLL20 (en commentaire) — export vers le chat Roll20
 export async function exportToRoll20(items, recipient = null) {
   const cmd = roll20Command(items, recipient);
   if (await copyText(cmd)) {
@@ -434,3 +509,4 @@ export async function exportToRoll20(items, recipient = null) {
   }
   return cmd;
 }
+*/

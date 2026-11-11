@@ -2,14 +2,31 @@
   <header class="cdnd-actor-head">
     <img class="cdnd-actor-img" src="{{img}}" alt="">
     <div class="cdnd-actor-id">
-      <input class="cdnd-actor-name" type="text" name="name" value="{{name}}" placeholder="Nom du personnage (comme sur Roll20)" {{#unless editable}}disabled{{/unless}}>
+      <input class="cdnd-actor-name" type="text" name="name" value="{{name}}" placeholder="Nom du personnage" {{#unless editable}}disabled{{/unless}}>
       <label class="cdnd-actor-pj">
         <input type="checkbox" name="{{pjField}}" {{#if isPJ}}checked{{/if}} {{#unless editable}}disabled{{/unless}}>
         PJ du Casino <small>(apparaît dans le menu « Pour quel PJ ? » des coffres)</small>
       </label>
-      <p class="cdnd-actor-hint">Le nom doit être <b>exactement</b> celui du personnage sur Roll20.</p>
+      {{!-- ROLL20 : <p class="cdnd-actor-hint">Le nom doit être <b>exactement</b> celui du personnage sur Roll20.</p> --}}
     </div>
   </header>
+
+  <h3 class="cdnd-h">🎒 Inventaire ({{inventoryCount}})</h3>
+  <section class="cdnd-actor-history cdnd-actor-inv">
+    {{#each inventory}}
+    <div class="cdnd-ah-item r-{{rarity}}" data-item-id="{{id}}">
+      {{#if img}}<img class="cdnd-ah-icon" src="{{img}}" alt="">{{else}}<span class="cdnd-ah-icon cdnd-ah-noimg">🎁</span>{{/if}}
+      <div class="cdnd-ah-txt" data-action="openItem">
+        <div class="cdnd-ah-name">{{name}}</div>
+        <div class="cdnd-ah-meta"><span class="cdnd-ah-rar">{{rarityLabel}}</span> · {{type}}{{#if stats}} · {{stats}}{{/if}}{{#if value}} · 💰 {{value}}{{/if}}</div>
+        {{#if description}}<div class="cdnd-ah-desc">{{description}}</div>{{/if}}
+      </div>
+      {{#if ../editable}}<button type="button" data-action="deleteItem" title="Retirer de l'inventaire">✕</button>{{/if}}
+    </div>
+    {{else}}
+    <div class="cdnd-empty">Inventaire vide. Les objets donnés depuis les coffres arrivent ici.</div>
+    {{/each}}
+  </section>
 
   <h3 class="cdnd-h">📜 Historique du butin ({{count}})</h3>
   <section class="cdnd-actor-history">
@@ -22,7 +39,7 @@
         <div class="cdnd-ah-meta">{{date}} · {{source}} · {{chest}} {{openedBy}}</div>
       </div>
       {{#if ../isGM}}
-      <button type="button" data-action="copyEntry" title="Copier la commande Roll20 pour ce personnage">📋</button>
+      {{!-- ROLL20 : <button type="button" data-action="copyEntry" title="Copier la commande Roll20 pour ce personnage">📋</button> --}}
       <button type="button" data-action="removeEntry" title="Retirer de l'historique">✕</button>
       {{/if}}
     </div>
@@ -30,9 +47,11 @@
     <div class="cdnd-empty">Aucun objet reçu pour l'instant.</div>
     {{/each}}
   </section>
+  {{!-- ROLL20 (en commentaire)
   {{#if isGM}}{{#if hasHistory}}
   <footer class="cdnd-actor-foot">
     <button type="button" data-action="copyAll">📋 Copier tout l'historique pour Roll20</button>
   </footer>
   {{/if}}{{/if}}
+  --}}
 </div>
