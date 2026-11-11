@@ -196,7 +196,9 @@ async function prepareDnd5e(item) {
   data.name = item.name || data.name;
   if (item.description) {
     // la description française, puis l'originale repliée pour garder les détails du compendium
-    const orig = data.system?.description?.value;
+    data.system ??= {};
+    data.system.description ??= {};
+    const orig = data.system.description.value;
     data.system.description.value = toHTML(item.description)
       + (orig ? `<details><summary>Texte original (${esc(doc.name)})</summary>${orig}</details>` : "");
   }
