@@ -282,7 +282,7 @@ export function buildStrip(pool, winner, { length = 64, winIndex = 54, rng = def
 
 export const EXPORT_PREFIX = "CDND1.";
 const EXPORT_FIELDS = ["name", "rarity", "type", "subtype", "description", "quantity", "weight", "value",
-  "attunement", "damage", "damageType", "properties", "ac", "bonus", "range", "r20mods", "currency", "icon"];
+  "attunement", "damage", "damageType", "properties", "ac", "bonus", "range", "r20mods", "currency", "icon", "compendium", "propertiesEn"];
 
 /** Ne garde que les champs utiles (et non vides) pour l'export. */
 export function exportableItem(item) {

@@ -25,7 +25,7 @@
 var CasinoLoot = CasinoLoot || (function () {
   "use strict";
 
-  var VERSION = "1.4.0";
+  var VERSION = "1.4.1";
   var PREFIX = "CDND1.";
   var INBOX = "Casino Inbox";
 
@@ -247,10 +247,11 @@ var CasinoLoot = CasinoLoot || (function () {
       mods.push("Item Type: " + (ranged ? "Ranged Weapon" : "Melee Weapon"));
       if (it.damage) mods.push("Damage: " + it.damage);
       if (it.damageType) mods.push("Damage Type: " + String(it.damageType).toLowerCase());
-      var vers = /versatile\s*\(([^)]+)\)/i.exec(it.properties || "");
+      var propsEn = it.propertiesEn || it.properties || "";
+      var vers = /(?:versatile|polyvalente)\s*\(([^)]+)\)/i.exec(propsEn);
       if (vers) { mods.push("Alternate Damage: " + vers[1]); if (it.damageType) mods.push("Alternate Damage Type: " + String(it.damageType).toLowerCase()); }
       if (it.range) mods.push("Range: " + it.range);
-      if (it.properties) mods.push("Properties: " + String(it.properties).replace(/\s*\([^)]*\)/g, ""));
+      if (propsEn) mods.push("Properties: " + String(propsEn).replace(/\s*\([^)]*\)/g, ""));
       if (b) mods.push((ranged ? "Ranged" : "Melee") + " Attacks +" + b, (ranged ? "Ranged" : "Melee") + " Damage +" + b);
     } else if (it.type === "armor") {
       var ac = (Number(it.ac) || 0) + b;
