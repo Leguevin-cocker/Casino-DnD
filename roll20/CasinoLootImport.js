@@ -25,7 +25,7 @@
 var CasinoLoot = CasinoLoot || (function () {
   "use strict";
 
-  var VERSION = "1.3.0";
+  var VERSION = "1.4.0";
   var PREFIX = "CDND1.";
   var INBOX = "Casino Inbox";
 
@@ -157,16 +157,24 @@ var CasinoLoot = CasinoLoot || (function () {
     return /2024|beacon|5\.5/i.test(name) ? "2024" : "2014";
   }
 
+  /** Dans une partie à plusieurs types de fiches, les scripts ne peuvent écrire que sur le type principal. */
+  function canWrite2024(character) {
+    if (typeof getSheetItem !== "function" || typeof setSheetItem !== "function") return false;
+    var primary = String(campaignGet("sheetName") || "");
+    var own = String(character.get("charactersheetname") || "");
+    if (primary && own && primary !== own) return false;   // fiche 2024 dans une partie « 2014 » (ou l'inverse)
+    return true;
+  }
+
+  var COIN_LABELS = { gp: "po", sp: "pa", cp: "pc", pp: "pp", ep: "pe" };
+
   var COIN_KEYS = { po: "gp", gp: "gp", pa: "sp", sp: "sp", pc: "cp", cp: "cp", pp: "pp", pe: "ep", ep: "ep" };
 
   /** Pièces sur la fiche 2024 : getSheetItem / setSheetItem (bac à sable « Experimental »). */
   function addCoins2024(character, it, done) {
     var key = COIN_KEYS[String(it.currency || "").toLowerCase()];
     if (!key) return false;
-    if (typeof getSheetItem !== "function" || typeof setSheetItem !== "function") {
-      whisperGM("<b>Casino :</b> fiche 2024 détectée, mais le bac à sable Mod n'est pas en <b>Experimental</b> : impossible d'ajouter les pièces. (Paramètres → Mod (API) Scripts → Sandbox → Experimental)");
-      return false;
-    }
+    if (!canWrite2024(character)) return "manual";
     var amount = Number(it.quantity) || 0;
     Promise.resolve(getSheetItem(character.id, key)).then(function (cur) {
       var next = (parseInt(cur, 10) || 0) + amount;
@@ -433,7 +441,7 @@ var CasinoLoot = CasinoLoot || (function () {
     var sheet = c.sheet && !opts.nosheet && character;
     var kind = sheet ? sheetKind(character) : null;
     var handouts = c.handout && !opts.nohandout;
-    var notOnSheet = [];
+    var notOnSheet = [], manualCoins = [];
     items.forEach(function (it) {
       it.rarity = rarityKey(it.rarity);
       if (!TYPES[it.type]) it.type = "gear";
@@ -441,7 +449,9 @@ var CasinoLoot = CasinoLoot || (function () {
       if (sheet) {
         try {
           if (kind === "2024") {
-            coins = addCoins2024(character, it);
+            var r = addCoins2024(character, it);
+            if (r === "manual") { manualCoins.push(it); coins = true; }
+            else coins = r;
             if (!coins) notOnSheet.push(it);   // pas d'ajout d'objet possible sur la fiche 2024
           } else {
             coins = addCoins(character, it);
@@ -459,11 +469,14 @@ var CasinoLoot = CasinoLoot || (function () {
       sendChat("Casino", "/direct " + chatCard(items, whoLabel));
     }
     if (kind === "2024") {
+      var autoCoins = items.length - notOnSheet.length - manualCoins.length;
       whisperGM('<div style="font-size:11px">✔ <b>' + esc(whoLabel) + "</b> (fiche D&amp;D 2024) : " +
-        (items.length - notOnSheet.length ? (items.length - notOnSheet.length) + " lot(s) de pièces ajouté(s) à la bourse. " : "") +
-        (notOnSheet.length ? "<br>⚠ Roll20 ne permet pas encore aux scripts d'ajouter un objet à l'inventaire de la fiche 2024 : " +
+        (autoCoins ? autoCoins + " lot(s) de pièces ajouté(s) à la bourse. " : "") +
+        (manualCoins.length ? "<br>💰 Les scripts n'ont pas accès à cette fiche (partie à fiche principale 2014) : ajoute à la main " +
+          manualCoins.map(function (i) { return "<b>+" + (Number(i.quantity) || 0) + " " + (COIN_LABELS[COIN_KEYS[String(i.currency).toLowerCase()]] || i.currency) + "</b>"; }).join(", ") + "." : "") +
+        (notOnSheet.length ? "<br>⚠ Objet(s) à glisser sur la fiche depuis le compendium : " +
           notOnSheet.map(function (i) { return "<b>" + esc(i.name) + "</b> (" + compendiumLink(i, "📖 compendium") + ")"; }).join(", ") +
-          "<br>➜ clique sur 📖, puis glisse le titre de l'objet sur la fiche. Le handout contient le même lien." : "") + "</div>");
+          "<br>➜ clique sur 📖, puis glisse le titre de l'objet sur la fiche. Le joueur a le même lien dans son handout et peut le faire lui-même." : "") + "</div>");
     } else if (sheet || handouts) {
       whisperGM('<div style="font-size:11px">✔ ' + items.length + " objet(s) pour <b>" + esc(whoLabel) + "</b>" +
         (sheet ? " — ajouté(s) à l'inventaire" : "") + (handouts ? " — handout(s) créé(s)" : "") + "</div>");
